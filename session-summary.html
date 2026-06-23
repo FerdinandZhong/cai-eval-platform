@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAI Eval Platform — Session Summary</title>
+  <style>
+    :root {
+      --black: #000;
+      --near-black: #1d1d1f;
+      --gray-bg: #f5f5f7;
+      --white: #fff;
+      --blue: #0071e3;
+      --blue-bright: #2997ff;
+      --green: #30d158;
+      --red: #ff453a;
+      --text-secondary: rgba(0,0,0,0.55);
+      --border: rgba(0,0,0,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      background: var(--gray-bg);
+      color: var(--near-black);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      background: var(--black);
+      color: var(--white);
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    header h1 {
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      margin-bottom: 8px;
+    }
+    header p {
+      color: rgba(255,255,255,0.65);
+      font-size: 17px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    header .meta {
+      margin-top: 20px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+    }
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+    section {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 20px 0 8px;
+      color: var(--near-black);
+    }
+    p, li { font-size: 15px; color: var(--text-secondary); }
+    p { margin-bottom: 12px; }
+    ul, ol { padding-left: 22px; margin-bottom: 12px; }
+    li { margin-bottom: 6px; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code {
+      font-family: "SF Mono", Menlo, monospace;
+      font-size: 13px;
+      background: rgba(0,0,0,0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    pre {
+      background: #1c1c1e;
+      color: #e5e5ea;
+      padding: 16px 18px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.45;
+      margin: 12px 0;
+    }
+    pre code { background: none; padding: 0; color: inherit; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 12px 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 980px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .badge-ok { background: rgba(48,209,88,0.15); color: #1a8f39; }
+    .badge-fail { background: rgba(255,69,58,0.15); color: #c0392b; }
+    .badge-info { background: rgba(0,113,227,0.12); color: var(--blue); }
+    .badge-warn { background: rgba(255,149,0,0.15); color: #b86e00; }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .status-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .status-card .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .status-card .value { font-size: 15px; font-weight: 600; color: var(--near-black); }
+    .timeline { list-style: none; padding: 0; }
+    .timeline li {
+      position: relative;
+      padding-left: 24px;
+      margin-bottom: 16px;
+      border-left: 2px solid var(--border);
+      padding-bottom: 4px;
+    }
+    .timeline li::before {
+      content: "";
+      position: absolute;
+      left: -5px;
+      top: 6px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+    .timeline li.done::before { background: var(--green); }
+    .timeline li.issue::before { background: var(--red); }
+    .timeline .step-title { font-weight: 600; color: var(--near-black); font-size: 15px; }
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>CAI Eval Platform — Session Summary</h1>
+  <p>Work performed during the Cursor session: local deployment, startup fix, platform overview, and tracing discussion.</p>
+  <div class="meta">Generated June 18, 2026 · Repository: cai-eval-platform</div>
+</header>
+
+<main>
+
+  <section id="overview">
+    <h2>Overview</h2>
+    <p>This session focused on standing up the local CAI Eval Platform instance from <code>IMPLEMENTATION.md</code>, diagnosing a Ragas/LangChain import failure, applying a fix, and reviewing how evaluation targets and agent workflow tracing work in the codebase.</p>
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="label">Docker container</div>
+        <div class="value"><span class="badge badge-ok">Running</span></div>
+      </div>
+      <div class="status-card">
+        <div class="label">Eval UI</div>
+        <div class="value"><a href="http://localhost:8080/app/">localhost:8080/app/</a></div>
+      </div>
+      <div class="status-card">
+        <div class="label">Phoenix</div>
+        <div class="value"><a href="http://localhost:8080/">localhost:8080/</a></div>
+      </div>
+      <div class="status-card">
+        <div class="label">Health API</div>
+        <div class="value"><code>/app/api/health</code></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="timeline">
+    <h2>Session Timeline</h2>
+    <ol class="timeline">
+      <li class="done">
+        <div class="step-title">Read IMPLEMENTATION.md</div>
+        <p>Reviewed platform architecture: FastAPI backend, Phoenix OTEL tracing, target adapters (LLM endpoint, Agent Studio, local script), bundled datasets, Docker deployment, and phased rollout (Phases 0–3).</p>
+      </li>
+      <li class="done">
+        <div class="step-title">Built and started Docker instance</div>
+        <pre><code>docker build -f docker/Dockerfile -t cai-eval-platform .
+docker run -d --name cai-eval-platform -p 8080:8080 -v cai-eval-data:/data cai-eval-platform</code></pre>
+        <p>Container stack: Phoenix → FastAPI (Uvicorn on port 9000) → nginx on port 8080. Spider validation split downloaded from HuggingFace at image build time.</p>
+      </li>
+      <li class="issue">
+        <div class="step-title">Diagnosed startup failure</div>
+        <p>Phoenix started successfully, but the eval API returned <strong>502 Bad Gateway</strong>. Uvicorn crashed on import:</p>
+        <pre><code>ModuleNotFoundError: No module named 'langchain_community.chat_models.vertexai'</code></pre>
+        <p>Import chain: <code>main.py</code> → <code>evaluator.py</code> → <code>trace/event_to_ragas.py</code> → <code>ragas</code> → <code>ragas.llms.base</code>.</p>
+      </li>
+      <li class="done">
+        <div class="step-title">Applied compatibility fix</div>
+        <p>Added <code>backend/ragas_compat.py</code> to register a stub <code>langchain_community.chat_models.vertexai</code> module before Ragas loads. Imported it first in <code>backend/main.py</code>. Rebuilt image and restarted container.</p>
+      </li>
+      <li class="done">
+        <div class="step-title">Verified full stack</div>
+        <table>
+          <thead><tr><th>Endpoint</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET /app/api/health</code></td><td><span class="badge badge-ok">200</span> <code>{"status":"ok","phoenix_ready":true}</code></td></tr>
+            <tr><td><code>GET /app/</code></td><td><span class="badge badge-ok">200</span> Eval UI</td></tr>
+            <tr><td><code>GET /</code></td><td><span class="badge badge-ok">200</span> Phoenix UI</td></tr>
+          </tbody>
+        </table>
+      </li>
+      <li>
+        <div class="step-title">Discussed UI split (not implemented)</div>
+        <p>Explored splitting model-endpoint eval from agent-workflow eval into separate flows. User decided the existing <strong>Evaluation Target</strong> dropdown in the UI is sufficient — no code changes made.</p>
+      </li>
+      <li>
+        <div class="step-title">Discussed agent workflow tracing</div>
+        <p>Explained why middle-step workflow events make agent tracing easier than black-box LLM endpoint tracing. The platform already uses polled events for Phoenix spans, Ragas metrics, and UI drill-down.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="code-changes">
+    <h2>Code Changes Made</h2>
+    <table>
+      <thead>
+        <tr><th>File</th><th>Change</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>backend/ragas_compat.py</code></td>
+          <td><span class="badge badge-ok">New</span> Import shim for Ragas ↔ LangChain compatibility</td>
+        </tr>
+        <tr>
+          <td><code>backend/main.py</code></td>
+          <td><span class="badge badge-ok">Modified</span> Import <code>ragas_compat</code> before any Ragas-dependent modules</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>ragas_compat.py — what it does</h3>
+    <p>Ragas 0.4.3 imports <code>ChatVertexAI</code> from <code>langchain_community.chat_models.vertexai</code> at module load time. Newer <code>langchain-community</code> (0.4.x) removed that module. The shim registers a stub module so Ragas can import successfully. The platform does <em>not</em> use Vertex AI — it uses OpenAI-compatible judge endpoints via <code>JUDGE_LLM_URL</code>.</p>
+    <pre><code># backend/main.py (first import after docstring)
+import ragas_compat  # must load before any ragas import</code></pre>
+  </section>
+
+  <section id="platform">
+    <h2>Platform Architecture (from IMPLEMENTATION.md)</h2>
+    <table>
+      <thead><tr><th>Before</th><th>After (standalone repo)</th></tr></thead>
+      <tbody>
+        <tr><td>Lived under ray-serve-cai-bench/docker</td><td>Standalone <code>cai-eval-platform</code></td></tr>
+        <tr><td>stdlib http.server</td><td>FastAPI + Uvicorn</td></tr>
+        <tr><td>Text-to-SQL only</td><td>LLM endpoints, Agent Studio workflows, local Python scripts</td></tr>
+        <tr><td>Phoenix experiments (REST only)</td><td>Experiments + OTEL traces</td></tr>
+        <tr><td>Hardcoded dataset schema</td><td>Generic metadata-driven schema</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Evaluation targets</h3>
+    <table>
+      <thead><tr><th>Target</th><th>Class / mechanism</th><th>Typical use</th></tr></thead>
+      <tbody>
+        <tr><td><code>llm_endpoint</code></td><td><code>LLMEndpointTarget</code></td><td>OpenAI-compatible chat completions, Spider/TPC-H text2sql</td></tr>
+        <tr><td><code>agent_studio</code></td><td><code>AgentStudioWorkflowTarget</code></td><td>Agent Studio kickoff/events API</td></tr>
+        <tr><td><code>local_script</code></td><td>Push API + <code>cai-eval-runner</code></td><td>Run Python locally, push results</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Bundled datasets</h3>
+    <table>
+      <thead><tr><th>ID</th><th>Task</th><th>Examples</th></tr></thead>
+      <tbody>
+        <tr><td><code>spider</code></td><td>text2sql</td><td>1034</td></tr>
+        <tr><td><code>tpch</code></td><td>text2sql</td><td>22</td></tr>
+        <tr><td><code>agent_sample</code></td><td>agent</td><td>2</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="tracing">
+    <h2>Agent Workflow Tracing — Key Findings</h2>
+    <p>For agent workflows, tracing from <strong>middle-step events</strong> is easier and richer than black-box endpoint tracing.</p>
+
+    <h3>Three-tier tracing strategy (from IMPLEMENTATION.md)</h3>
+    <table>
+      <thead><tr><th>Tier</th><th>Mechanism</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Poll events → convert to OTEL spans → eval Phoenix</td><td><span class="badge badge-ok">Implemented</span></td></tr>
+        <tr><td>2</td><td>Store <code>workflow_trace_id</code> + optional Phoenix deep link</td><td><span class="badge badge-ok">Implemented</span></td></tr>
+        <tr><td>3</td><td>Workflow backend exports OTEL to same Phoenix collector</td><td><span class="badge badge-warn">Deployment config</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>How events are used</h3>
+    <ul>
+      <li><code>backend/targets/agent_studio.py</code> — polls <code>GET /api/workflow/events?trace_id=</code> until kickoff completes or fails</li>
+      <li><code>backend/trace/workflow_events_to_spans.py</code> — maps events (task, agent, tool, LLM) to OTEL spans for Phoenix</li>
+      <li><code>backend/trace/event_to_ragas.py</code> — converts events to Ragas messages for agent metrics</li>
+      <li><code>backend/static/index.html</code> — job detail panel shows per-example event timeline</li>
+    </ul>
+
+    <h3>LLM endpoint vs agent workflow</h3>
+    <table>
+      <thead><tr><th></th><th>LLM endpoint</th><th>Agent workflow</th></tr></thead>
+      <tbody>
+        <tr><td>Visibility</td><td>Input → output only</td><td>Tasks, agents, tools, LLM calls</td></tr>
+        <tr><td>Tracing source</td><td>OpenAI SDK instrumentation</td><td>Workflow events API</td></tr>
+        <tr><td>Tool metrics</td><td>Not feasible without instrumentation</td><td>Feasible via event trajectory</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="langchain">
+    <h2>langchain_community — What It Is Used For</h2>
+    <p><strong>Not used directly by cai-eval-platform.</strong> It appears only as a transitive dependency of Ragas:</p>
+    <ul>
+      <li><code>backend/metrics/ragas_agent.py</code> — Ragas agent metrics (goal accuracy, tool call accuracy/F1)</li>
+      <li><code>backend/trace/event_to_ragas.py</code> — event → Ragas message conversion</li>
+    </ul>
+    <p>Ragas loads LangChain provider adapters (including Vertex AI) at import time even when the platform only uses OpenAI-compatible judge LLMs.</p>
+  </section>
+
+  <section id="env">
+    <h2>Environment &amp; Commands</h2>
+    <h3>Docker (full stack)</h3>
+    <pre><code>docker build -f docker/Dockerfile -t cai-eval-platform .
+docker run -p 8080:8080 -v cai-eval-data:/data cai-eval-platform</code></pre>
+
+    <h3>Local dev (API only, no Phoenix/nginx)</h3>
+    <pre><code>cd backend
+pip install -e ..
+DATASETS_DIR=../datasets DATA_DIR=/tmp/cai-eval-data uvicorn main:app --reload --port 9000</code></pre>
+
+    <h3>Key environment variables</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>PHOENIX_PORT</code></td><td>6006</td><td>Internal Phoenix port</td></tr>
+        <tr><td><code>MANAGER_PORT</code></td><td>9000</td><td>Eval API port</td></tr>
+        <tr><td><code>DATA_DIR</code></td><td>/data</td><td>Persistent volume</td></tr>
+        <tr><td><code>DATASETS_DIR</code></td><td>/app/datasets</td><td>Bundled datasets</td></tr>
+        <tr><td><code>JUDGE_LLM_URL</code></td><td>—</td><td>Default judge LLM for Ragas metrics</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="deferred">
+    <h2>Not Done / Deferred</h2>
+    <ul>
+      <li>Split model-endpoint and agent-workflow into separate UI sections (user kept existing Evaluation Target dropdown)</li>
+      <li>File output evaluation (PDF/CSV)</li>
+      <li>Remote sandbox for arbitrary Python</li>
+      <li>GitHub Actions CI</li>
+      <li>React frontend migration</li>
+      <li>Persistent job store (jobs remain in-memory)</li>
+      <li>Richer OTEL span hierarchy from workflow events (Tier 3 native export)</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  CAI Eval Platform session summary · Open in browser: <code>session-summary.html</code>
+</footer>
+
+</body>
+</html>

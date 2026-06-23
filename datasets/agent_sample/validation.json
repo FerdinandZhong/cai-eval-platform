@@ -1,0 +1,12 @@
+[
+  {
+    "example_id": "agent_0",
+    "question": "What is the total revenue for Q1?",
+    "expected_output": "Total Q1 revenue is $1.2M"
+  },
+  {
+    "example_id": "agent_1",
+    "question": "List the top 3 customers by order count",
+    "expected_output": "Top customers: Acme Corp (45), Beta Inc (38), Gamma LLC (31)"
+  }
+]

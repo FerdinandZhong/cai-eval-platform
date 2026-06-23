@@ -1,0 +1,16 @@
+[project]
+name = "cai-eval-runner"
+version = "1.0.0"
+description = "Local CLI to run Python agent workflows against CAI Eval Platform"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "click>=8.1",
+]
+
+[project.scripts]
+cai-eval-runner = "cai_eval_runner.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

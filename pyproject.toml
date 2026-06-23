@@ -1,0 +1,24 @@
+[project]
+name = "cai-eval-platform"
+version = "1.0.0"
+description = "Model and agentic workflow evaluation platform with Phoenix tracing"
+requires-python = ">=3.11"
+dependencies = [
+    "arize-phoenix>=4.0",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
+    "openinference-instrumentation-openai>=0.1",
+    "openai>=1.0",
+    "datasets>=2.14",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "ragas>=0.2",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["httpx", "pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

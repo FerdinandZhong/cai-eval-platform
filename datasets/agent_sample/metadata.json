@@ -1,0 +1,12 @@
+{
+  "id": "agent_sample",
+  "name": "Agent Workflow Sample",
+  "description": "Sample dataset for agentic workflow evaluation with expected text outputs",
+  "size": 2,
+  "task_type": "agent",
+  "input_fields": ["question"],
+  "reference_fields": ["expected_output"],
+  "requires_execution": false,
+  "default_metrics": ["agent_goal_accuracy", "exact_match"],
+  "workflow_spec": "docs/SAMPLE_ANALYTICS_QA_WORKFLOW.md"
+}
