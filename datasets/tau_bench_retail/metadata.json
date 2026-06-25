@@ -1,0 +1,15 @@
+{
+  "id": "tau_bench_retail",
+  "name": "τ-bench Retail",
+  "description": "Customer-service agent evaluation — retail domain. Human-annotated tasks from τ-bench (Sierra Research, arXiv:2406.12045). Covers order cancellation, returns, exchanges, and account modifications. Reference tool calls use τ-bench API names; remap via input_mapping if your workflow uses different names.",
+  "size": 180,
+  "task_type": "agent",
+  "input_fields": ["question"],
+  "reference_fields": ["reference"],
+  "requires_execution": false,
+  "default_metrics": ["agent_goal_accuracy", "tool_call_accuracy", "tool_call_f1"],
+  "system_prompt": "You are a helpful customer service agent for an online retail store. Help the customer accomplish their request using the available tools. Be concise and professional.",
+  "source": "https://github.com/sierra-research/tau-bench",
+  "hf_dataset": "HuggingFaceH4/tau2-bench-data",
+  "license": "MIT"
+}

@@ -6,6 +6,7 @@ set -euo pipefail
 PHOENIX_PORT="${PHOENIX_PORT:-6006}"
 MANAGER_PORT="${MANAGER_PORT:-9000}"
 DATA_DIR="${DATA_DIR:-/data}"
+APP_PORT="${CDSW_APP_PORT:-8080}"
 NGINX_RUNTIME_DIR="/tmp/nginx"
 
 NGINX_BIN=""
@@ -38,7 +39,7 @@ http {
     proxy_connect_timeout  10;
 
     server {
-        listen      8080;
+        listen      ${APP_PORT};
         server_name _;
 
         location /app/ {

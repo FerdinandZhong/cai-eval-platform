@@ -1,0 +1,35 @@
+# CAI Eval Platform — CML Job Chain
+#
+# Job dependency order:
+#   git_sync
+#     → setup_eval_env   (install deps, nginx, download datasets)
+#
+# NOTE: After setup_eval_env completes, create a CML *Application* (not a job)
+# that runs:  cai_integration/launch_app_job.py
+# Applications are persistent services; they are configured in the CML UI or
+# via the CML API (POST /api/v2/projects/{project_id}/applications).
+#
+# To deploy:
+#   1. Copy/run setup_project.py, create_jobs.py, trigger_jobs.py from
+#      ray-serve-cai/cai_integration (they are generic CML API wrappers).
+#   2. Create the Application manually in the CML UI pointing at
+#      cai_integration/launch_app_job.py as the application script.
+
+jobs:
+  git_sync:
+    name: "Git Repository Sync"
+    script: ".git_sync.py"
+    parent_job_key: null
+    timeout: 300       # git fetch + reset; should finish in < 2 min
+    cpu: 1
+    memory: 4
+    description: "Pull latest code from GitHub into the CML project"
+
+  setup_eval_env:
+    name: "Setup Eval Environment"
+    script: "cai_integration/setup_environment.py"
+    parent_job_key: "git_sync"
+    timeout: 300       # 5 min: uv venv + eval deps + tau-bench download
+    cpu: 4
+    memory: 16
+    description: "Create /home/cdsw/.venv with eval platform deps, no-root nginx, tau-bench dataset"

@@ -33,6 +33,8 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 COPY datasets/ /app/datasets/
+COPY scripts/ /app/scripts/
+
 RUN python -c "\
 import json, pathlib; \
 out = pathlib.Path('/app/datasets/spider/validation.json'); \
@@ -44,6 +46,8 @@ records = [{'example_id': f'spider_{i}', 'question': r['question'], 'query': r['
 out.write_text(json.dumps(records, indent=2)); \
 print(f'Saved {len(records)} examples to {out}', flush=True) \
 "
+
+RUN python /app/scripts/download_tau_bench.py
 
 EXPOSE 8080
 ENTRYPOINT ["/entrypoint.sh"]

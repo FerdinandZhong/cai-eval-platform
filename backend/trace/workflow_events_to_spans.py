@@ -1,8 +1,10 @@
 """Convert Agent Studio workflow events to OpenTelemetry spans for Phoenix."""
 
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
+from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
@@ -25,6 +27,17 @@ EVENT_SPAN_MAP = {
 }
 
 
+def _ts_to_ns(ts: Optional[str]) -> Optional[int]:
+    """ISO timestamp string → nanoseconds since epoch (OTEL time unit)."""
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return int(dt.timestamp() * 1e9)
+    except Exception:
+        return None
+
+
 def export_workflow_trace(
     trace_id: str,
     events: list[dict],
@@ -32,36 +45,67 @@ def export_workflow_trace(
     example_id: str,
     output_text: str = "",
 ) -> Optional[str]:
-    """Export workflow events as OTEL spans. Returns root span_id hex if exported."""
+    """Export workflow events as OTEL spans with original event timestamps.
+
+    Uses tracer.start_span() directly (not context manager) so we can set
+    explicit start_time and end_time on every span. Without this, Phoenix
+    shows the entire trace collapsed to <1 ms because Python processes all
+    events nearly simultaneously.
+
+    Returns root span_id hex if exported, else None.
+    """
     if not events:
         return None
 
-    root_span_id = None
-    with tracer.start_as_current_span(
+    now_ns = time.time_ns()
+    timestamps = [_ts_to_ns(e.get("timestamp")) for e in events]
+    valid_ts = [t for t in timestamps if t is not None]
+
+    first_ts = valid_ts[0] if valid_ts else now_ns
+    last_ts = max(valid_ts) if valid_ts else now_ns
+    if last_ts <= first_ts:
+        last_ts = first_ts + 1_000_000  # ensure ≥1 ms root duration
+
+    root_span = tracer.start_span(
         "workflow.kickoff",
         kind=SpanKind.SERVER,
+        start_time=first_ts,
         attributes={
             "workflow.trace_id": trace_id,
             "eval.job_id": job_id,
             "eval.example_id": example_id,
         },
-    ) as root:
-        root_span_id = format(root.get_span_context().span_id, "016x")
+    )
+    root_span_id = format(root_span.get_span_context().span_id, "016x")
 
+    root_ctx = trace.set_span_in_context(root_span)
+    token = otel_context.attach(root_ctx)
+    try:
         for i, event in enumerate(events):
             etype = event.get("type", "unknown")
             prefix, kind = EVENT_SPAN_MAP.get(etype, ("event", SpanKind.INTERNAL))
             name = _span_name(prefix, event)
 
-            with tracer.start_as_current_span(
+            evt_start = timestamps[i] or now_ns
+            if i + 1 < len(events):
+                evt_end = timestamps[i + 1] or (evt_start + 1_000_000)
+            else:
+                evt_end = last_ts if last_ts > evt_start else evt_start + 1_000_000
+
+            child = tracer.start_span(
                 name,
                 kind=kind,
+                start_time=evt_start,
                 attributes=_event_attributes(event, etype),
-            ) as span:
-                if etype.endswith("_error") or etype == "crew_kickoff_failed":
-                    span.set_status(Status(StatusCode.ERROR, event.get("error", etype)))
-                if etype == "crew_kickoff_completed":
-                    span.set_attribute("output.value", output_text[:4096])
+            )
+            if etype.endswith("_error") or etype == "crew_kickoff_failed":
+                child.set_status(Status(StatusCode.ERROR, event.get("error", etype)))
+            if etype == "crew_kickoff_completed":
+                child.set_attribute("output.value", output_text[:4096])
+            child.end(end_time=evt_end)
+    finally:
+        otel_context.detach(token)
+        root_span.end(end_time=last_ts)
 
     return root_span_id
 

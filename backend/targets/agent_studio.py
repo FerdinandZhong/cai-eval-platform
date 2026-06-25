@@ -109,7 +109,11 @@ class AgentStudioWorkflowTarget:
                 self.discover()
 
             mapped = _map_inputs(inputs, ctx.input_mapping)
-            session_id = ctx.session_id or self.ensure_session()
+            if ctx.session_id:
+                session_id = ctx.session_id
+            else:
+                fresh = self.client.create_session()
+                session_id = fresh["session_id"]
 
             if self._schema and self._schema.is_conversational:
                 kickoff_payload = {

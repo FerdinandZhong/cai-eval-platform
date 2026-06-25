@@ -7,8 +7,8 @@ Supports LLM endpoints, Agent Studio workflows, and local script push results.
 import json
 import os
 import sqlite3
-import subprocess
 import time
+import urllib.request
 import uuid
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -150,7 +150,7 @@ def _ensure_spider_databases() -> Path:
 
     zip_path = DATA_DIR / "spider" / "spider-master.zip"
     db_dir.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["curl", "-L", "-o", str(zip_path), SPIDER_DB_URL], check=True)
+    urllib.request.urlretrieve(SPIDER_DB_URL, str(zip_path))
 
     import zipfile
 
@@ -393,7 +393,6 @@ def run_job(job: EvaluationJob, phoenix_client=None) -> None:
         session_id = None
         if job.target_type == "agent_studio":
             target.discover()
-            session_id = target.ensure_session()
             if job.concurrency > 1:
                 job.concurrency = 1
 
