@@ -23,12 +23,16 @@ from pathlib import Path
 
 def _repo_root() -> Path:
     # CML runs job scripts in an IPython-style engine where __file__ is not
-    # defined, so fall back to the project working directory (CML jobs run
-    # from the project root, e.g. /home/cdsw).
+    # defined. CML clones the repo into /home/cdsw and runs jobs from there,
+    # so resolve the working git repo rather than CDSW_PROJECT (which is the
+    # project's display name, not a path).
     try:
         return Path(__file__).parent.parent.resolve()
     except NameError:
-        return Path(os.environ.get("CDSW_PROJECT", os.getcwd())).resolve()
+        for cand in ("/home/cdsw", os.getcwd()):
+            if (Path(cand) / ".git").is_dir():
+                return Path(cand).resolve()
+        return Path("/home/cdsw")
 
 
 REPO_ROOT = _repo_root()
@@ -234,7 +238,7 @@ def download_datasets() -> bool:
     return run_command(f"{python} {script}")
 
 
-def main() -> int:
+def main() -> None:
     print("=" * 70)
     print("CAI Eval Platform — Environment Setup")
     print("=" * 70)
@@ -254,11 +258,12 @@ def main() -> int:
 
     print("\n" + "=" * 70)
     if failed:
-        print(f"Setup completed with failures: {', '.join(failed)}")
-        return 1
+        # CML runs jobs in an IPython engine that treats any SystemExit (even
+        # sys.exit(0)) as a job failure, so signal failure by raising and
+        # success by returning normally.
+        raise RuntimeError(f"Setup completed with failures: {', '.join(failed)}")
     print("Setup completed successfully.")
-    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

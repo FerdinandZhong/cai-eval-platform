@@ -19,18 +19,22 @@ Env vars:
 
 import os
 import subprocess
-import sys
+
 
 def _repo_dir() -> str:
     # CML runs job scripts in an IPython-style engine where __file__ is not
-    # defined, so fall back to the project working directory (CML jobs run
-    # from the project root, e.g. /home/cdsw).
+    # defined. CML clones the project's git repo directly into /home/cdsw and
+    # runs jobs from there, so resolve the working git repo rather than
+    # CDSW_PROJECT (which is the project's display name, not a path).
     if os.environ.get("GIT_SYNC_DIR"):
         return os.environ["GIT_SYNC_DIR"]
     try:
         return os.path.dirname(os.path.abspath(__file__))
     except NameError:
-        return os.environ.get("CDSW_PROJECT", os.getcwd())
+        for cand in ("/home/cdsw", os.getcwd()):
+            if os.path.isdir(os.path.join(cand, ".git")):
+                return cand
+        return "/home/cdsw"
 
 
 REPO_DIR = _repo_dir()
@@ -51,7 +55,7 @@ def run(cmd) -> bool:
     return True
 
 
-def main() -> int:
+def main() -> None:
     print("=" * 70)
     print("CAI Eval Platform — Git Sync")
     print("=" * 70)
@@ -59,23 +63,23 @@ def main() -> int:
     print(f"Branch:   {BRANCH}")
 
     if not os.path.isdir(os.path.join(REPO_DIR, ".git")):
-        print(f"{REPO_DIR} is not a git repository — nothing to sync.")
         # Not fatal: a freshly cloned project is already up to date.
-        return 0
+        print(f"{REPO_DIR} is not a git repository — nothing to sync.")
+        return
 
     # fetch + hard reset so local matches the remote branch exactly,
     # discarding any drift in the project working copy.
     if not run("git fetch origin --prune"):
-        print("git fetch failed")
-        return 1
+        raise RuntimeError("git fetch failed")
     if not run(f"git reset --hard origin/{BRANCH}"):
-        print(f"git reset to origin/{BRANCH} failed")
-        return 1
+        raise RuntimeError(f"git reset to origin/{BRANCH} failed")
 
     run("git rev-parse --short HEAD")
     print("Git sync complete.")
-    return 0
 
 
+# CML runs jobs in an IPython engine that treats ANY SystemExit (even
+# sys.exit(0)) as a job failure. So never sys.exit() here: return normally
+# on success, and raise on failure to mark the job failed.
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
