@@ -18,18 +18,32 @@ Env vars:
 """
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).parent.parent.resolve()
 
-APP_PORT    = int(os.environ.get("CDSW_APP_PORT", 8080))
-DATA_DIR    = Path(os.environ.get("DATA_DIR", "/home/cdsw/cai-eval-data"))
+def _repo_root() -> Path:
+    # CML runs application scripts in an IPython engine where __file__ is not
+    # defined. CML clones the repo into /home/cdsw and runs from there.
+    try:
+        return Path(__file__).parent.parent.resolve()
+    except NameError:
+        for cand in ("/home/cdsw", os.getcwd()):
+            if (Path(cand) / ".git").is_dir():
+                return Path(cand).resolve()
+        return Path("/home/cdsw")
+
+
+REPO_ROOT = _repo_root()
+
+APP_PORT     = int(os.environ.get("CDSW_APP_PORT", 8080))
+DATA_DIR     = Path(os.environ.get("DATA_DIR", "/home/cdsw/cai-eval-data"))
 DATASETS_DIR = Path(os.environ.get("DATASETS_DIR", str(REPO_ROOT / "datasets")))
 PHOENIX_COLLECTOR_ENDPOINT = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", "")
 
 
-def main() -> int:
+def main() -> None:
     print("=" * 70)
     print("CAI Eval Platform — Eval API Application")
     print(f"  CDSW_APP_PORT              : {APP_PORT}")
@@ -41,12 +55,10 @@ def main() -> int:
 
     backend_dir = REPO_ROOT / "backend"
     if not (backend_dir / "main.py").exists():
-        print(f"ERROR: backend/main.py not found at {backend_dir}")
-        return 1
+        raise RuntimeError(f"backend/main.py not found at {backend_dir}")
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Propagate env vars to uvicorn (and thereby to the backend)
     os.environ["DATA_DIR"] = str(DATA_DIR)
     os.environ["DATASETS_DIR"] = str(DATASETS_DIR)
 
@@ -60,21 +72,21 @@ def main() -> int:
             "  Set this env var to the Phoenix CML Application URL to enable tracing.\n"
         )
 
-    uvicorn_argv = [
-        sys.executable, "-m", "uvicorn", "main:app",
-        "--host", "0.0.0.0",
-        "--port", str(APP_PORT),
-    ]
-    print(f"\n[eval API] exec: {' '.join(uvicorn_argv)}")
+    venv_python = Path("/home/cdsw/.venv/bin/python")
+    python = str(venv_python) if venv_python.exists() else sys.executable
+
+    cmd = [python, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", str(APP_PORT)]
+    print(f"\n[eval API] starting: {' '.join(cmd)}")
     print(f"  working dir: {backend_dir}")
     print("=" * 70)
 
-    # Change to backend dir so uvicorn resolves 'main:app' correctly,
-    # then replace this Python process with uvicorn.
-    os.chdir(str(backend_dir))
-    os.execv(sys.executable, uvicorn_argv)
-    # os.execv never returns
+    # Use subprocess.run (blocking) instead of os.execv: the CML IPython
+    # engine treats process replacement (execv) as a crash.
+    result = subprocess.run(cmd, cwd=str(backend_dir))
+    if result.returncode != 0:
+        raise RuntimeError(f"uvicorn exited with code {result.returncode}")
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+# CML runs application scripts in an IPython engine where __name__ is NOT
+# "__main__", so call unconditionally.
+main()

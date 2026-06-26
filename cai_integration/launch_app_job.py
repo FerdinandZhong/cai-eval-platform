@@ -40,5 +40,6 @@ def main() -> None:
         raise RuntimeError(f"launch_app.sh exited with code {result.returncode}")
 
 
-if __name__ == "__main__":
-    main()
+# CML runs application scripts in an IPython engine where __name__ is NOT
+# "__main__", so call unconditionally.
+main()
