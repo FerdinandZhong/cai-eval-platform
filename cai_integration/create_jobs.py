@@ -133,6 +133,7 @@ class JobManager:
 
         runtime_identifier = self.get_runtime_identifier()
         job_ids = {}
+        self.failed_jobs = []
         existing_jobs = self.list_jobs(project_id)
 
         for job_key, job_config in jobs_config.get("jobs", {}).items():
@@ -146,10 +147,14 @@ class JobManager:
                 job_id = existing_jobs[job_name]
                 if self.update_job(project_id, job_id, job_config, runtime_identifier):
                     job_ids[job_key] = job_id
+                else:
+                    self.failed_jobs.append(job_name)
             else:
                 job_id = self.create_job(project_id, job_config, parent_job_id, runtime_identifier)
                 if job_id:
                     job_ids[job_key] = job_id
+                else:
+                    self.failed_jobs.append(job_name)
 
         return job_ids
 
@@ -163,15 +168,25 @@ class JobManager:
             print("Failed to load jobs configuration")
             return False
 
+        configured_count = len(jobs_config.get("jobs", {}))
         job_ids = self.create_or_update_jobs(project_id, jobs_config)
         if not job_ids:
             print("Failed to create jobs")
             return False
 
+        failed = getattr(self, "failed_jobs", [])
+        if failed:
+            print("=" * 70)
+            print(f"Failed to create/update {len(failed)} of {configured_count} configured jobs:")
+            for name in failed:
+                print(f"   {name}")
+            print("=" * 70)
+            return False
+
         print("=" * 70)
         print("Job Creation Complete!")
         print(f"Project ID: {project_id}")
-        print(f"Jobs created/updated: {len(job_ids)}")
+        print(f"Jobs created/updated: {len(job_ids)} of {configured_count}")
         for job_key, job_id in job_ids.items():
             print(f"   {job_key}: {job_id}")
         print("=" * 70)

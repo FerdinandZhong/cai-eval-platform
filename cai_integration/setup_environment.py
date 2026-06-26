@@ -21,7 +21,17 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).parent.parent.resolve()
+def _repo_root() -> Path:
+    # CML runs job scripts in an IPython-style engine where __file__ is not
+    # defined, so fall back to the project working directory (CML jobs run
+    # from the project root, e.g. /home/cdsw).
+    try:
+        return Path(__file__).parent.parent.resolve()
+    except NameError:
+        return Path(os.environ.get("CDSW_PROJECT", os.getcwd())).resolve()
+
+
+REPO_ROOT = _repo_root()
 VENV_DIR = Path(os.environ.get("EVAL_VENV", "/home/cdsw/.venv"))
 
 
