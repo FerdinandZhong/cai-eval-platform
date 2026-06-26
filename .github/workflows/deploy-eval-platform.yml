@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip_env_setup:
+        description: 'Skip env setup jobs and go straight to launching applications'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   setup-project:
@@ -91,6 +96,7 @@ jobs:
 
   trigger-setup-env:
     needs: [setup-project, create-jobs]
+    if: ${{ github.event.inputs.skip_env_setup != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -135,6 +141,10 @@ jobs:
 
   launch-applications:
     needs: [setup-project, trigger-setup-env]
+    if: |
+      always() &&
+      needs.setup-project.result == 'success' &&
+      (needs.trigger-setup-env.result == 'success' || needs.trigger-setup-env.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
