@@ -29,7 +29,7 @@ jobs:
     name: "Setup Eval Environment"
     script: "cai_integration/setup_environment.py"
     parent_job_key: "git_sync"
-    timeout: 300       # 5 min: uv venv + eval deps + tau-bench download
+    timeout: 1800      # 30 min: uv venv + eval deps + tau-bench download
     cpu: 4
     memory: 16
     description: "Create /home/cdsw/.venv with eval platform deps, no-root nginx, tau-bench dataset"

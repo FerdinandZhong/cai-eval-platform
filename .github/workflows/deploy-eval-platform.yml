@@ -92,7 +92,7 @@ jobs:
   trigger-setup-env:
     needs: [setup-project, create-jobs]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
