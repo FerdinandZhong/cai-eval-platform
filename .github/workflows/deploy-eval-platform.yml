@@ -174,5 +174,4 @@ jobs:
           echo "- **Phoenix Tracing**: \`cai_integration/start_phoenix.py\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Eval Platform**: \`cai_integration/launch_app_job.py\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Set \`PHOENIX_COLLECTOR_ENDPOINT\` in the Eval Platform application" >> $GITHUB_STEP_SUMMARY
-          echo "to the Phoenix application URL + \`/v1/traces\`." >> $GITHUB_STEP_SUMMARY
+          echo "\`PHOENIX_COLLECTOR_ENDPOINT\` is auto-wired from Phoenix's internal endpoint." >> $GITHUB_STEP_SUMMARY
