@@ -207,10 +207,13 @@ class ApplicationManager:
         if not ok or not app_id:
             return None
 
-        running = self.wait_for_app_running(project_id, app_id, name, timeout=120)
-        if not running:
-            print(f"      WARNING: Phoenix did not reach running state — "
-                  "collector endpoint may not be reachable yet")
+        if name not in existing:
+            # Only wait on first creation — if the app already existed the
+            # endpoint is stable and we don't need to block on restart.
+            running = self.wait_for_app_running(project_id, app_id, name, timeout=120)
+            if not running:
+                print(f"      WARNING: Phoenix did not reach running state — "
+                      "collector endpoint may not be reachable yet")
 
         endpoint = self.get_phoenix_collector_endpoint(project_id, app_id)
         return app_id, endpoint
