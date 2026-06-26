@@ -188,21 +188,21 @@ class JobTrigger:
         root_job_name = root_job_config.get("name", root_job_key)
         trigger_epoch = time.time()
 
+        # Always trigger the root job — skipping it leaves trigger_epoch in the
+        # past and _wait_for_new_run hangs waiting for a child run that was
+        # never spawned (CML only auto-triggers children when parent actually runs).
         print(f"Triggering root job: {root_job_name}")
-        if not self.force_rebuild and self.job_succeeded_recently(project_id, root_job_id):
-            print(f"   Root job already succeeded — skipping trigger\n")
-        else:
-            run_id = self.trigger_job(project_id, root_job_id)
-            if not run_id:
-                print("   Failed to trigger root job")
-                return False
-            print(f"   Root job triggered: {run_id}\n")
-            trigger_epoch = time.time()
-            timeout = root_job_config.get("timeout", 600)
-            if not self.wait_for_job_completion(project_id, root_job_id, run_id, timeout):
-                print(f"Root job failed: {root_job_name}")
-                return False
-            print(f"{root_job_name} complete\n")
+        run_id = self.trigger_job(project_id, root_job_id)
+        if not run_id:
+            print("   Failed to trigger root job")
+            return False
+        print(f"   Root job triggered: {run_id}\n")
+        trigger_epoch = time.time()
+        timeout = root_job_config.get("timeout", 600)
+        if not self.wait_for_job_completion(project_id, root_job_id, run_id, timeout):
+            print(f"Root job failed: {root_job_name}")
+            return False
+        print(f"{root_job_name} complete\n")
 
         for job_key in ordered_keys[1:]:
             job_id = job_ids.get(job_key)
