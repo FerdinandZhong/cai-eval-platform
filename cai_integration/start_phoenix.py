@@ -11,7 +11,7 @@ Env vars:
 """
 
 import os
-import sys
+import subprocess
 from pathlib import Path
 
 APP_PORT = int(os.environ.get("CDSW_APP_PORT", 8080))
@@ -20,7 +20,6 @@ WORKING_DIR = Path(os.environ.get("PHOENIX_WORKING_DIR", "/home/cdsw/cai-eval-da
 
 def find_phoenix() -> str:
     import shutil
-    # prefer venv-installed phoenix
     venv_phoenix = Path("/home/cdsw/.venv/bin/phoenix")
     if venv_phoenix.is_file() and os.access(str(venv_phoenix), os.X_OK):
         return str(venv_phoenix)
@@ -32,7 +31,7 @@ def find_phoenix() -> str:
     )
 
 
-def main() -> int:
+def main() -> None:
     print("=" * 70)
     print("CAI Eval Platform — Phoenix Application")
     print(f"  CDSW_APP_PORT      : {APP_PORT}")
@@ -42,18 +41,19 @@ def main() -> int:
     WORKING_DIR.mkdir(parents=True, exist_ok=True)
     os.environ["PHOENIX_WORKING_DIR"] = str(WORKING_DIR)
 
-    try:
-        phoenix_bin = find_phoenix()
-    except RuntimeError as exc:
-        print(f"ERROR: {exc}")
-        return 1
+    phoenix_bin = find_phoenix()
 
-    print(f"\n[Phoenix] exec: {phoenix_bin} serve --port {APP_PORT} --host 0.0.0.0")
-    # Replace this Python process with Phoenix — CML keeps the Application
-    # alive as long as phoenix is running.
-    os.execv(phoenix_bin, [phoenix_bin, "serve", "--port", str(APP_PORT), "--host", "0.0.0.0"])
-    # os.execv never returns
+    print(f"\n[Phoenix] starting: {phoenix_bin} serve --port {APP_PORT} --host 0.0.0.0")
+    # Use subprocess.run (blocking) instead of os.execv: the CML IPython
+    # engine treats process replacement (execv) as a crash. Keeping Python
+    # alive as the parent while Phoenix runs as a child is the correct pattern.
+    result = subprocess.run(
+        [phoenix_bin, "serve", "--port", str(APP_PORT), "--host", "0.0.0.0"],
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"Phoenix exited with code {result.returncode}")
 
 
+# Entry point when run directly (outside CML engine).
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
