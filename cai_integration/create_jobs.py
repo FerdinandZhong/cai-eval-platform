@@ -108,7 +108,8 @@ class JobManager:
         print("      Failed to create job")
         return None
 
-    def update_job(self, project_id, job_id, job_config, runtime_identifier=None) -> bool:
+    def update_job(self, project_id, job_id, job_config, runtime_identifier=None,
+                   parent_job_id=None) -> bool:
         print(f"   Updating job: {job_config['name']}")
         job_data = {
             "name": job_config["name"],
@@ -119,6 +120,8 @@ class JobManager:
         }
         if runtime_identifier:
             job_data["runtime_identifier"] = runtime_identifier
+        if parent_job_id:
+            job_data["parent_job_id"] = parent_job_id
 
         result = self.make_request("PATCH", f"projects/{project_id}/jobs/{job_id}", data=job_data)
         if result is not None:
@@ -145,7 +148,7 @@ class JobManager:
 
             if job_name in existing_jobs:
                 job_id = existing_jobs[job_name]
-                if self.update_job(project_id, job_id, job_config, runtime_identifier):
+                if self.update_job(project_id, job_id, job_config, runtime_identifier, parent_job_id):
                     job_ids[job_key] = job_id
                 else:
                     self.failed_jobs.append(job_name)

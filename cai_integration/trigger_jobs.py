@@ -214,11 +214,17 @@ class JobTrigger:
             job_name = job_config.get("name", job_key)
             timeout = job_config.get("timeout", 1800)
 
-            print(f"Waiting for: {job_name}")
-            new_run_id = self._wait_for_new_run(project_id, job_id, job_name, trigger_epoch, timeout)
-            if not new_run_id:
+            # Explicitly trigger each dependent job rather than relying on
+            # CML's parent-child auto-trigger: existing jobs may not have
+            # the parent_job_id set if they were created before the parent
+            # existed, making auto-trigger unreliable.
+            print(f"Triggering: {job_name}")
+            run_id = self.trigger_job(project_id, job_id)
+            if not run_id:
+                print(f"   Failed to trigger {job_name}")
                 return False
-            if not self.wait_for_job_completion(project_id, job_id, new_run_id, timeout):
+            print(f"   Triggered: {run_id}")
+            if not self.wait_for_job_completion(project_id, job_id, run_id, timeout):
                 print(f"{job_name} failed")
                 return False
             print(f"{job_name} complete\n")
