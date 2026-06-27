@@ -162,26 +162,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests pyyaml
 
-      - name: Create / restart CML Applications
+      - name: Create / restart CML Application
         env:
           CML_HOST: ${{ secrets.CML_HOST }}
           CML_API_KEY: ${{ secrets.CML_API_KEY }}
           RUNTIME_IDENTIFIER: ${{ secrets.RUNTIME_IDENTIFIER }}
         run: |
-          echo "Creating / restarting Phoenix and Eval Platform applications..."
+          echo "Creating / restarting the co-located CAI Eval Platform application..."
           python cai_integration/create_applications.py \
             --project-id ${{ needs.setup-project.outputs.project_id }}
-          echo "Applications launched"
+          echo "Application launched"
 
       - name: Create application summary
         if: always()
         run: |
-          echo "## Eval Platform: Applications" >> $GITHUB_STEP_SUMMARY
+          echo "## Eval Platform: Application" >> $GITHUB_STEP_SUMMARY
           echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "**Project ID**: ${{ needs.setup-project.outputs.project_id }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Applications" >> $GITHUB_STEP_SUMMARY
-          echo "- **Phoenix Tracing**: \`cai_integration/start_phoenix.py\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Eval Platform**: \`cai_integration/launch_app_job.py\`" >> $GITHUB_STEP_SUMMARY
+          echo "### Application (co-located)" >> $GITHUB_STEP_SUMMARY
+          echo "- **CAI Eval Platform**: \`cai_integration/start_platform.py\` (Phoenix + FastAPI behind nginx)" >> $GITHUB_STEP_SUMMARY
+          echo "  - Phoenix UI: \`<app-url>/\`" >> $GITHUB_STEP_SUMMARY
+          echo "  - Eval API: \`<app-url>/app/\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`PHOENIX_COLLECTOR_ENDPOINT\` is auto-wired from Phoenix's internal endpoint." >> $GITHUB_STEP_SUMMARY
+          echo "Backend reaches Phoenix over localhost (\`PHOENIX_BASE_URL\`, default \`http://127.0.0.1:6006\`)." >> $GITHUB_STEP_SUMMARY
+          echo "See \`cai_integration/DEPLOY.md\` for in-project / manual launch and standalone-Phoenix mode." >> $GITHUB_STEP_SUMMARY

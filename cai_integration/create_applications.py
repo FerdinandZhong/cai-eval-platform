@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
 """
-Create or restart CML Applications for the CAI Eval Platform.
+Create or restart the CML Application(s) for the CAI Eval Platform.
 
-Creates two persistent CML Applications in order:
-  1. Phoenix Tracing  — cai_integration/start_phoenix.py
-  2. Eval Platform    — cai_integration/launch_app_job.py
+Default (recommended): ONE co-located Application running
+cai_integration/start_platform.py — Phoenix + FastAPI behind nginx, with the
+backend talking to Phoenix over localhost. No cross-app wiring needed.
 
-After Phoenix starts, its internal endpoint is resolved and injected as
-PHOENIX_COLLECTOR_ENDPOINT into the Eval API application so tracing is
-wired up automatically without any manual step.
+Opt-in (--standalone-phoenix): TWO Applications — a standalone Phoenix
+(reusable as a shared tracing backend) plus an eval-API-only app, with
+PHOENIX_BASE_URL injected into the eval app to point at the Phoenix app.
+NOTE: the backend's Phoenix REST calls send no auth headers, so cross-app
+REST traffic assumes the Phoenix app is reachable without CML auth.
 
 Usage:
+    # External (CI): CML_HOST + CML_API_KEY in env
     python cai_integration/create_applications.py --project-id <project_id>
 
-Required env vars: CML_HOST, CML_API_KEY
-Optional env vars: RUNTIME_IDENTIFIER
+    # In-project (CML Session/Job): uses workspace creds automatically
+    python cai_integration/create_applications.py
+
+    # Standalone Phoenix mode
+    python cai_integration/create_applications.py --standalone-phoenix
+
+Credentials (first match wins):
+    CML_HOST / CML_API_KEY            — external, e.g. from GitHub Actions
+    CDSW_API_URL / CDSW_APIV2_KEY     — injected inside a CML Session/Job
+Project id: --project-id, else CDSW_PROJECT_ID (injected in-project).
+Optional: RUNTIME_IDENTIFIER
 """
 
 import argparse
@@ -24,6 +36,15 @@ import time
 import requests
 from typing import Optional
 
+
+PLATFORM_APP = {
+    "name": "CAI Eval Platform",
+    "description": "Co-located Phoenix tracing + FastAPI eval API behind nginx",
+    "script": "cai_integration/start_platform.py",
+    "subdomain": "cai-eval",
+    "cpu": 4,
+    "memory": 16,
+}
 
 PHOENIX_APP = {
     "name": "CAI Eval Platform — Phoenix Tracing",
@@ -37,7 +58,7 @@ PHOENIX_APP = {
 EVAL_APP = {
     "name": "CAI Eval Platform — Eval API",
     "description": "FastAPI evaluation engine for LLMs and agent workflows",
-    "script": "cai_integration/launch_app_job.py",
+    "script": "cai_integration/start_app.py",
     "subdomain": "eval",
     "cpu": 4,
     "memory": 16,
@@ -47,16 +68,27 @@ EVAL_APP = {
 class ApplicationManager:
 
     def __init__(self):
-        self.cml_host = os.environ.get("CML_HOST", "").rstrip("/")
-        self.api_key = os.environ.get("CML_API_KEY")
+        # External creds take precedence; fall back to CML workspace-injected
+        # creds so the same script runs unchanged inside a CML Session/Job.
+        host = (os.environ.get("CML_HOST") or os.environ.get("CDSW_API_URL") or "").rstrip("/")
+        self.api_key = (
+            os.environ.get("CML_API_KEY") or os.environ.get("CDSW_APIV2_KEY")
+        )
         self.runtime_identifier = os.environ.get("RUNTIME_IDENTIFIER")
 
-        if not all([self.cml_host, self.api_key]):
-            print("Error: Missing required environment variables")
-            print("   Required: CML_HOST, CML_API_KEY")
+        if not host or not self.api_key:
+            print("Error: Missing CML credentials.")
+            print("   Provide CML_HOST + CML_API_KEY (external), or run inside a")
+            print("   CML Session/Job where CDSW_API_URL + CDSW_APIV2_KEY are set.")
             sys.exit(1)
 
-        self.api_url = f"{self.cml_host}/api/v2"
+        # Normalize to the v2 API base regardless of which var supplied the host.
+        for suffix in ("/api/v2", "/api/v1"):
+            if host.endswith(suffix):
+                host = host[: -len(suffix)]
+                break
+        self.cml_host = host
+        self.api_url = f"{host}/api/v2"
         self.headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -168,112 +200,105 @@ class ApplicationManager:
         print(f"      Timed out waiting for {app_name} ({timeout}s)")
         return False
 
-    def get_phoenix_collector_endpoint(self, project_id: str,
-                                       app_id: str) -> str:
-        """
-        Try to get Phoenix's internal cluster URL so the Eval API can talk to
-        it directly without going through the public load balancer.
+    def deploy_app(self, project_id: str, existing: dict, app_config: dict,
+                   environment: dict = None) -> Optional[str]:
+        """Create or restart a single application. Returns app_id or None."""
+        name = app_config["name"]
+        print(f"\n[{name}]")
+        if name in existing:
+            app_id = existing[name].get("id", "")
+            ok = self.update_and_restart_application(
+                project_id, app_id, app_config, environment=environment
+            )
+            return app_id if ok else None
+        app_id = self.create_application(project_id, app_config, environment=environment)
+        return app_id
 
-        CML API v2 may return a 'local_url' field on the application object
-        (internal pod/service URL, e.g. http://<pod-ip>:8080). Fall back to
-        constructing the public URL from CML_HOST + subdomain if absent.
+    def get_phoenix_base_url(self, project_id: str, app_id: str) -> str:
+        """Resolve the Phoenix app's base URL for the eval app to talk to.
+
+        Prefer the internal cluster URL (local_url) to avoid public TLS
+        routing; fall back to the public subdomain URL.
         """
         result = self.make_request("GET", f"projects/{project_id}/applications/{app_id}")
         if result:
-            # Prefer internal cluster URL to avoid public TLS routing
             local_url = result.get("local_url") or result.get("app_url") or ""
             if local_url:
-                endpoint = local_url.rstrip("/") + "/v1/traces"
-                print(f"      Phoenix internal endpoint: {endpoint}")
-                return endpoint
-
-        # Fallback: public URL via subdomain
-        endpoint = f"{self.cml_host}/ds/applications/phoenix/v1/traces"
-        print(f"      Phoenix public endpoint (fallback): {endpoint}")
+                print(f"      Phoenix internal base: {local_url.rstrip('/')}")
+                return local_url.rstrip("/")
+        endpoint = f"{self.cml_host}/ds/applications/{PHOENIX_APP['subdomain']}"
+        print(f"      Phoenix public base (fallback): {endpoint}")
         return endpoint
 
-    def deploy_phoenix(self, project_id: str, existing: dict) -> Optional[tuple]:
-        """Create or restart Phoenix. Returns (app_id, collector_endpoint) or None."""
-        name = PHOENIX_APP["name"]
-        print(f"\n[{name}]")
-
-        if name in existing:
-            app_id = existing[name].get("id", "")
-            ok = self.update_and_restart_application(project_id, app_id, PHOENIX_APP)
-        else:
-            app_id = self.create_application(project_id, PHOENIX_APP)
-            ok = app_id is not None
-
-        if not ok or not app_id:
-            return None
-
-        if name not in existing:
-            # Only wait on first creation — if the app already existed the
-            # endpoint is stable and we don't need to block on restart.
-            running = self.wait_for_app_running(project_id, app_id, name, timeout=120)
-            if not running:
-                print(f"      WARNING: Phoenix did not reach running state — "
-                      "collector endpoint may not be reachable yet")
-
-        endpoint = self.get_phoenix_collector_endpoint(project_id, app_id)
-        return app_id, endpoint
-
-    def deploy_eval_api(self, project_id: str, existing: dict,
-                        collector_endpoint: str) -> bool:
-        """Create or restart the Eval API, injecting the Phoenix endpoint."""
-        name = EVAL_APP["name"]
-        print(f"\n[{name}]")
-        print(f"   PHOENIX_COLLECTOR_ENDPOINT: {collector_endpoint}")
-
-        environment = {"PHOENIX_COLLECTOR_ENDPOINT": collector_endpoint}
-
-        if name in existing:
-            app_id = existing[name].get("id", "")
-            return self.update_and_restart_application(
-                project_id, app_id, EVAL_APP, environment=environment
-            )
-        else:
-            app_id = self.create_application(project_id, EVAL_APP, environment=environment)
-            return app_id is not None
-
-    def run(self, project_id: str) -> bool:
+    def run(self, project_id: str, standalone_phoenix: bool = False) -> bool:
         print("=" * 70)
-        print("Create / Restart CML Applications — CAI Eval Platform")
+        mode = "standalone Phoenix + eval API" if standalone_phoenix else "co-located (one app)"
+        print(f"Create / Restart CML Applications — {mode}")
         print("=" * 70)
 
         existing = self.list_applications(project_id)
-        print(f"Found {len(existing)} existing application(s)\n")
+        print(f"Found {len(existing)} existing application(s)")
 
-        # Step 1: Phoenix — must come first so we can resolve its endpoint
-        phoenix_result = self.deploy_phoenix(project_id, existing)
-        if phoenix_result is None:
+        if not standalone_phoenix:
+            app_id = self.deploy_app(project_id, existing, PLATFORM_APP)
+            ok = app_id is not None
+            print("\n" + "=" * 70)
+            print(f"   [{'OK' if ok else 'FAILED'}] {PLATFORM_APP['name']}")
+            print("   Phoenix UI: <app-url>/   |   Eval API: <app-url>/app/")
+            print("=" * 70)
+            return ok
+
+        # Standalone mode: Phoenix first, then eval API pointed at it.
+        phoenix_id = self.deploy_app(project_id, existing, PHOENIX_APP)
+        if not phoenix_id:
             print("\nFailed to deploy Phoenix application")
             return False
-        _, collector_endpoint = phoenix_result
+        if PHOENIX_APP["name"] not in existing:
+            self.wait_for_app_running(project_id, phoenix_id, PHOENIX_APP["name"], timeout=120)
 
-        # Step 2: Eval API — wired to Phoenix automatically
-        eval_ok = self.deploy_eval_api(project_id, existing, collector_endpoint)
+        phoenix_base = self.get_phoenix_base_url(project_id, phoenix_id)
+        eval_id = self.deploy_app(
+            project_id, existing, EVAL_APP,
+            environment={"PHOENIX_BASE_URL": phoenix_base},
+        )
+        eval_ok = eval_id is not None
 
         print("\n" + "=" * 70)
-        print("Applications Summary:")
-        print(f"   [{'OK' if phoenix_result else 'FAILED'}] {PHOENIX_APP['name']}")
+        print(f"   [OK] {PHOENIX_APP['name']}")
         print(f"   [{'OK' if eval_ok else 'FAILED'}] {EVAL_APP['name']}")
         if eval_ok:
-            print(f"\n   PHOENIX_COLLECTOR_ENDPOINT auto-wired: {collector_endpoint}")
+            print(f"   PHOENIX_BASE_URL wired: {phoenix_base}")
+            print("   NOTE: backend Phoenix REST calls send no auth — the eval app must")
+            print("   be able to reach the Phoenix app without CML auth for this to work.")
         print("=" * 70)
         return eval_ok
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Create or restart CML Applications for the CAI Eval Platform"
+        description="Create or restart CML Application(s) for the CAI Eval Platform"
     )
-    parser.add_argument("--project-id", required=True, help="CML project ID")
+    parser.add_argument(
+        "--project-id",
+        default=os.environ.get("CDSW_PROJECT_ID"),
+        help="CML project ID (defaults to CDSW_PROJECT_ID when run in-project)",
+    )
+    parser.add_argument(
+        "--standalone-phoenix",
+        action="store_true",
+        help="Deploy Phoenix and the eval API as two separate apps instead of one",
+    )
     args = parser.parse_args()
+
+    if not args.project_id:
+        print("Error: project id not provided and CDSW_PROJECT_ID not set.")
+        print("   Pass --project-id <id>, or run inside a CML Session/Job.")
+        sys.exit(1)
 
     try:
         manager = ApplicationManager()
-        sys.exit(0 if manager.run(args.project_id) else 1)
+        ok = manager.run(args.project_id, standalone_phoenix=args.standalone_phoenix)
+        sys.exit(0 if ok else 1)
     except KeyboardInterrupt:
         print("\nCancelled by user")
         sys.exit(1)

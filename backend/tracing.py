@@ -7,14 +7,32 @@ _initialized = False
 _lock = threading.Lock()
 
 
+def phoenix_base_url() -> str:
+    """Root URL of the Phoenix server (no trailing slash).
+
+    Defaults to localhost so a co-located deployment needs zero config; set
+    PHOENIX_BASE_URL to point at a standalone/remote Phoenix instead.
+    """
+    base = os.environ.get("PHOENIX_BASE_URL")
+    if base:
+        return base.rstrip("/")
+    port = int(os.environ.get("PHOENIX_PORT", 6006))
+    return f"http://127.0.0.1:{port}"
+
+
 def setup_tracing() -> None:
     global _initialized
     with _lock:
         if _initialized:
             return
 
-        phoenix_port = int(os.environ.get("PHOENIX_PORT", 6006))
-        endpoint = f"http://127.0.0.1:{phoenix_port}/v1/traces"
+        # An explicit OTLP/collector endpoint wins; otherwise derive it from
+        # the Phoenix base URL.
+        endpoint = (
+            os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
+            or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+            or f"{phoenix_base_url()}/v1/traces"
+        )
         project = os.environ.get("PHOENIX_PROJECT", "cai-eval")
 
         try:

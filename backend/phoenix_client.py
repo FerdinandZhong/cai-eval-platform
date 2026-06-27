@@ -9,8 +9,21 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Optional
 
+def _phoenix_base_url() -> str:
+    """Root URL of the Phoenix REST API (no trailing slash).
+
+    Defaults to localhost so a co-located deployment needs zero config; set
+    PHOENIX_BASE_URL to point at a standalone/remote Phoenix instead.
+    """
+    base = os.environ.get("PHOENIX_BASE_URL")
+    if base:
+        return base.rstrip("/")
+    port = int(os.environ.get("PHOENIX_PORT", 6006))
+    return f"http://127.0.0.1:{port}"
+
+
 PHOENIX_PORT = int(os.environ.get("PHOENIX_PORT", 6006))
-_BASE = f"http://127.0.0.1:{PHOENIX_PORT}"
+_BASE = _phoenix_base_url()
 
 
 def _http(method: str, path: str, body: Optional[dict] = None, params: str = "") -> dict:
