@@ -114,22 +114,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests pyyaml
 
-      - name: Trigger setup_eval_env job chain
+      - name: Trigger git_sync (setup_eval_env runs autonomously via CML job chain)
         env:
           CML_HOST: ${{ secrets.CML_HOST }}
           CML_API_KEY: ${{ secrets.CML_API_KEY }}
-          FORCE_REBUILD: ${{ github.event.inputs.force_rebuild || 'false' }}
         run: |
-          echo "Triggering environment setup jobs (git_sync -> setup_eval_env)..."
+          echo "Triggering git_sync — CML will auto-trigger setup_eval_env on success..."
           python cai_integration/trigger_jobs.py \
-            --project-id ${{ needs.setup-project.outputs.project_id }} \
-            --jobs-config cai_integration/jobs_config.yaml
-          echo "Environment setup jobs completed"
+            --project-id ${{ needs.setup-project.outputs.project_id }}
+          echo "git_sync complete; setup_eval_env running autonomously in CML"
 
       - name: Create deployment summary
         if: always()
         run: |
-          echo "## Eval Platform: Environment Setup" >> $GITHUB_STEP_SUMMARY
+          echo "## Eval Platform: git_sync triggered" >> $GITHUB_STEP_SUMMARY
           echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "**Project ID**: ${{ needs.setup-project.outputs.project_id }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -137,7 +135,7 @@ jobs:
           echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Force Rebuild**: ${{ github.event.inputs.force_rebuild || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- \`setup_eval_env\` runs autonomously in CML after \`git_sync\` succeeds (parent-child job chain)" >> $GITHUB_STEP_SUMMARY
 
   launch-applications:
     needs: [setup-project, create-jobs, trigger-setup-env]
