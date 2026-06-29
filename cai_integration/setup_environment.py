@@ -109,7 +109,7 @@ def install_nginx():
             print(f"  Could not create symlink: {e} — will compile from source")
 
     # Step 3: compile from source (no SSL, no PCRE, no zlib)
-    nginx_version = os.environ.get("NGINX_VERSION", "1.29.7")
+    nginx_version = os.environ.get("NGINX_VERSION", "1.29.8")
     nginx_url = os.environ.get(
         "NGINX_SOURCE_URL",
         f"https://nginx.org/download/nginx-{nginx_version}.tar.gz",
@@ -246,6 +246,7 @@ def main() -> None:
     steps = [
         ("uv installation",   ensure_uv),
         ("eval venv + deps",  setup_eval_venv),
+        ("nginx (no-root)",   install_nginx),
         ("tau-bench dataset", download_datasets),
     ]
 
