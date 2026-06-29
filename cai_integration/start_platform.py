@@ -70,16 +70,25 @@ def find_phoenix() -> str:
 
 
 def find_nginx() -> str:
-    # Prefer the no-root nginx produced by setup_environment.install_nginx().
-    home_nginx = Path.home() / ".local" / "bin" / "nginx"
-    if home_nginx.is_file() and os.access(str(home_nginx), os.X_OK):
-        return str(home_nginx)
-    for cand in ("/usr/sbin/nginx", "/usr/bin/nginx", "/usr/local/sbin/nginx"):
-        if os.access(cand, os.X_OK):
-            return cand
+    # Verify candidates by actually running nginx -v, not just checking the path.
+    # The home nginx may be a symlink created by setup_environment.install_nginx()
+    # that points to a system path not present in this container image.
+    candidates = [
+        str(Path.home() / ".local" / "bin" / "nginx"),
+        "/usr/sbin/nginx",
+        "/usr/bin/nginx",
+        "/usr/local/sbin/nginx",
+    ]
     found = shutil.which("nginx")
-    if found:
-        return found
+    if found and found not in candidates:
+        candidates.append(found)
+    for cand in candidates:
+        try:
+            r = subprocess.run([cand, "-v"], capture_output=True, timeout=5)
+            if r.returncode == 0:
+                return cand
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+            continue
     raise RuntimeError(
         "nginx not found. Run cai_integration/setup_environment.py first."
     )

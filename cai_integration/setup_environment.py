@@ -96,17 +96,24 @@ def install_nginx():
         print("  Existing nginx binary is broken — reinstalling...")
         os.remove(nginx_bin)
 
-    # Step 2: system nginx on PATH?
+    # Step 2: system nginx on PATH? Verify it actually runs before symlinking —
+    # the app container may have a different image where the system path is absent.
     result = subprocess.run(["which", "nginx"], capture_output=True, text=True)
     if result.returncode == 0:
         system_nginx = result.stdout.strip()
-        print(f"  System nginx found: {system_nginx}")
-        try:
-            os.symlink(system_nginx, nginx_bin)
-            print(f"  Symlinked to: {nginx_bin}")
-            return True
-        except OSError as e:
-            print(f"  Could not create symlink: {e} — will compile from source")
+        probe = subprocess.run([system_nginx, "-v"], capture_output=True, text=True)
+        if probe.returncode == 0:
+            print(f"  System nginx found and verified: {system_nginx}")
+            try:
+                if os.path.lexists(nginx_bin):
+                    os.remove(nginx_bin)
+                os.symlink(system_nginx, nginx_bin)
+                print(f"  Symlinked to: {nginx_bin}")
+                return True
+            except OSError as e:
+                print(f"  Could not create symlink: {e} — will compile from source")
+        else:
+            print(f"  System nginx at {system_nginx} failed probe — will compile from source")
 
     # Step 3: compile from source (no SSL, no PCRE, no zlib)
     nginx_version = os.environ.get("NGINX_VERSION", "1.29.8")
