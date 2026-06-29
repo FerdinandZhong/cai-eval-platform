@@ -140,35 +140,6 @@ class JobTrigger:
 
         return order
 
-    def _wait_for_new_run(self, project_id, job_id, job_name, trigger_epoch, timeout) -> Optional[str]:
-        print(f"   Waiting for CML to auto-trigger: {job_name} ...")
-        start = time.time()
-
-        while time.time() - start < timeout:
-            result = self.make_request(
-                "GET", f"projects/{project_id}/jobs/{job_id}/runs", params={"page_size": 5}
-            )
-            if result:
-                for run in result.get("runs", []):
-                    run_id = run.get("id")
-                    created_at = run.get("created_at", "")
-                    if not run_id or not created_at:
-                        continue
-                    try:
-                        from datetime import datetime, timezone
-                        ts = created_at.rstrip("Z")
-                        fmt = "%Y-%m-%dT%H:%M:%S.%f" if "." in ts else "%Y-%m-%dT%H:%M:%S"
-                        dt = datetime.strptime(ts, fmt).replace(tzinfo=timezone.utc)
-                        if dt.timestamp() > trigger_epoch:
-                            print(f"   [{int(time.time() - start)}s] New run detected: {run_id}")
-                            return run_id
-                    except Exception:
-                        return run_id
-            time.sleep(15)
-
-        print(f"   Timed out waiting for {job_name} to be auto-triggered ({timeout}s)")
-        return None
-
     def run(self, project_id: str, job_ids: Dict[str, str], job_configs: Dict) -> bool:
         print("=" * 70)
         print("Trigger CAI Eval Platform Deployment")

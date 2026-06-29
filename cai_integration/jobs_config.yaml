@@ -4,16 +4,11 @@
 #   git_sync
 #     → setup_eval_env   (install deps, nginx, download datasets)
 #
-# NOTE: After setup_eval_env completes, create a CML *Application* (not a job)
-# that runs:  cai_integration/launch_app_job.py
-# Applications are persistent services; they are configured in the CML UI or
-# via the CML API (POST /api/v2/projects/{project_id}/applications).
-#
-# To deploy:
-#   1. Copy/run setup_project.py, create_jobs.py, trigger_jobs.py from
-#      ray-serve-cai/cai_integration (they are generic CML API wrappers).
-#   2. Create the Application manually in the CML UI pointing at
-#      cai_integration/launch_app_job.py as the application script.
+# NOTE: After setup_eval_env completes, launch the CML Application via:
+#   - GitHub Actions: .github/workflows/deploy-eval-platform.yml (launch-applications job)
+#   - In-project:    python cai_integration/launch_in_project.py
+#   - CML UI:        Applications → New Application → script: cai_integration/start_platform.py
+# The single co-located Application (start_platform.py) runs Phoenix + FastAPI behind nginx.
 
 jobs:
   git_sync:

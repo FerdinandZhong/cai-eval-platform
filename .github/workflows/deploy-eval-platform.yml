@@ -140,10 +140,11 @@ jobs:
           echo "- **Force Rebuild**: ${{ github.event.inputs.force_rebuild || 'false' }}" >> $GITHUB_STEP_SUMMARY
 
   launch-applications:
-    needs: [setup-project, trigger-setup-env]
+    needs: [setup-project, create-jobs, trigger-setup-env]
     if: |
       always() &&
       needs.setup-project.result == 'success' &&
+      needs.create-jobs.result == 'success' &&
       (needs.trigger-setup-env.result == 'success' || needs.trigger-setup-env.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
