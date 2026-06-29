@@ -96,15 +96,25 @@ class JobTrigger:
         result = self.make_request("POST", f"projects/{project_id}/jobs/{job_id}/runs")
         return result.get("id") if result else None
 
-    def get_latest_run(self, project_id: str, job_id: str) -> Optional[dict]:
-        """Return the most recent run record regardless of status."""
-        result = self.make_request(
-            "GET", f"projects/{project_id}/jobs/{job_id}/runs", params={"page_size": 5}
-        )
-        if result:
-            runs = result.get("runs", [])
-            if runs:
-                return runs[0]
+    def get_latest_run(self, project_id: str, job_id: str,
+                       retries: int = 6, delay: float = 5.0) -> Optional[dict]:
+        """Return the most recent run record regardless of status.
+
+        CML marks a job "already active" before the run record is visible in
+        the runs list API.  Retry a few times to let the record appear.
+        """
+        for attempt in range(retries):
+            result = self.make_request(
+                "GET", f"projects/{project_id}/jobs/{job_id}/runs", params={"page_size": 5}
+            )
+            if result:
+                runs = result.get("runs", [])
+                if runs:
+                    return runs[0]
+            if attempt < retries - 1:
+                print(f"   Run record not yet visible — retrying in {delay:.0f}s "
+                      f"({attempt + 1}/{retries - 1})")
+                time.sleep(delay)
         return None
 
     def trigger_or_attach(self, project_id: str, job_id: str) -> Optional[str]:
@@ -227,17 +237,26 @@ class JobTrigger:
             job_config = jobs.get(job_key, {})
             job_name = job_config.get("name", job_key)
             timeout = job_config.get("timeout", 1800)
+            has_parent = bool(job_config.get("parent_job_key"))
 
-            # Use trigger_or_attach: if the job has parent_job_id set, CML
-            # auto-triggers it the moment the parent succeeds. We may arrive
-            # here before or after that happens, so we try an explicit trigger
-            # and fall back to attaching to the already-running auto-triggered run.
-            print(f"Triggering: {job_name}")
-            run_id = self.trigger_or_attach(project_id, job_id)
-            if not run_id:
-                print(f"   Failed to trigger {job_name}")
-                return False
-            print(f"   Triggered: {run_id}")
+            if has_parent:
+                # CML auto-triggers this job when its parent succeeds.
+                # Don't try to trigger it explicitly — just wait for the
+                # run that CML is already starting (or has just started).
+                print(f"Waiting for CML-auto-triggered: {job_name}")
+                run_id = self.get_latest_run(project_id, job_id)
+                if not run_id:
+                    print(f"   No run found for {job_name} after retries")
+                    return False
+                run_id = run_id.get("id") if isinstance(run_id, dict) else run_id
+            else:
+                print(f"Triggering: {job_name}")
+                run_id = self.trigger_or_attach(project_id, job_id)
+                if not run_id:
+                    print(f"   Failed to trigger {job_name}")
+                    return False
+
+            print(f"   Monitoring run: {run_id}")
             if not self.wait_for_job_completion(project_id, job_id, run_id, timeout):
                 print(f"{job_name} failed")
                 return False
