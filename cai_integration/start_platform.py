@@ -144,7 +144,7 @@ http {{
     proxy_connect_timeout  10;
 
     server {{
-        listen      {APP_PORT};
+        listen      127.0.0.1:{APP_PORT};
         server_name _;
 
         location /app/ {{
