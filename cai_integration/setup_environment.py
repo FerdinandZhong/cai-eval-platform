@@ -232,17 +232,23 @@ def setup_eval_venv() -> bool:
 
 
 def download_datasets() -> bool:
-    script = REPO_ROOT / "scripts" / "download_tau_bench.py"
-    if not script.exists():
-        print(f"  WARNING: {script} not found — skipping dataset download")
-        return True
-
     python = str(VENV_DIR / "bin" / "python")
     if not os.path.exists(python):
         python = sys.executable
 
-    print("  Downloading tau-bench retail dataset ...")
-    return run_command(f"{python} {script}")
+    ok = True
+    for name, script_name in [
+        ("tau-bench retail dataset", "download_tau_bench.py"),
+        ("Spider Text-to-SQL dataset", "download_spider.py"),
+    ]:
+        script = REPO_ROOT / "scripts" / script_name
+        if not script.exists():
+            print(f"  WARNING: {script} not found — skipping {name}")
+            continue
+        print(f"  Downloading {name} ...")
+        if not run_command(f"{python} {script}"):
+            ok = False
+    return ok
 
 
 def main() -> None:

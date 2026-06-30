@@ -67,30 +67,42 @@ def dataset_exists(name: str) -> bool:
     return _find_dataset(name) is not None
 
 
+_UPLOAD_CHUNK_SIZE = 200
+
+
 def upload_dataset(
     name: str,
     records: list,
     description: str = "",
     meta: Optional[dict] = None,
 ) -> dict:
-    from dataset_schema import get_input_fields, get_reference_fields, records_to_phoenix_arrays
+    from dataset_schema import records_to_phoenix_arrays
 
     meta = meta or {}
     inputs, outputs, metadata = records_to_phoenix_arrays(records, meta)
 
-    return _http(
-        "POST",
-        "/v1/datasets/upload",
-        {
-            "name": name,
-            "description": description,
-            "action": "create",
-            "inputs": inputs,
-            "outputs": outputs,
-            "metadata": metadata,
-        },
-        params="sync=true",
-    )
+    result: dict = {}
+    for i in range(0, len(inputs), _UPLOAD_CHUNK_SIZE):
+        chunk_inputs   = inputs[i:i + _UPLOAD_CHUNK_SIZE]
+        chunk_outputs  = outputs[i:i + _UPLOAD_CHUNK_SIZE]
+        chunk_metadata = metadata[i:i + _UPLOAD_CHUNK_SIZE]
+        action = "create" if i == 0 else "append"
+        print(f"[phoenix] uploading '{name}' chunk {i // _UPLOAD_CHUNK_SIZE + 1}"
+              f" ({len(chunk_inputs)} records, action={action})", flush=True)
+        result = _http(
+            "POST",
+            "/v1/datasets/upload",
+            {
+                "name": name,
+                "description": description,
+                "action": action,
+                "inputs": chunk_inputs,
+                "outputs": chunk_outputs,
+                "metadata": chunk_metadata,
+            },
+            params="sync=true",
+        )
+    return result
 
 
 def upload_evaluation_results(
