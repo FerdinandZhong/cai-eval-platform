@@ -147,10 +147,6 @@ http {{
         listen      127.0.0.1:{APP_PORT};
         server_name _;
 
-        location = / {{
-            return 302 /app/;
-        }}
-
         location /app/ {{
             proxy_pass         http://127.0.0.1:{MANAGER_PORT}/;
             proxy_set_header   Host $host;
@@ -225,8 +221,8 @@ def main() -> None:
     nginx_bin = find_nginx()
     conf_path = write_nginx_conf()
     print(f"\n[3/3] starting nginx: {nginx_bin} -c {conf_path} (foreground)")
-    print(f"\n  Eval App: <app-url>/app/  (/ redirects here)")
-    print(f"  Phoenix : <app-url>/      (direct)")
+    print(f"\n  Phoenix : <app-url>/")
+    print(f"  Eval App: <app-url>/app/")
     print(f"  Health  : <app-url>/app/api/health")
     print("=" * 70)
 
