@@ -61,7 +61,7 @@ Each eval run creates a **Phoenix project** named `{dataset_id}_{model_name}` so
 ## Quick links
 
 - [Quick Start](getting_started/quickstart.md)
-- [Deploy as a CAII Application (Docker)](getting_started/deploy_cml.md#option-a-caii-applications-ui-recommended)
-- [Deploy via GitHub Actions](getting_started/deploy_cml.md#option-b-github-actions-ci)
+- [Deploy on CAII Applications (k8s, recommended)](getting_started/deploy_caii_applications.md)
+- [Deploy on CAI Workbench](getting_started/deploy_cai_workbench.md)
 - [Agent Studio Workflow Evaluation](evaluation/agent_studio.md)
 - [Sample Analytics Q&A Workflow](sample_workflows/analytics_qa.md)

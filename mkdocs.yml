@@ -50,7 +50,8 @@ nav:
       - Quick Start: getting_started/quickstart.md
       - Deployment:
           - Docker: getting_started/deploy_docker.md
-          - CML / CAI Workbench: getting_started/deploy_cml.md
+          - CAI Workbench: getting_started/deploy_cai_workbench.md
+          - CAII Applications: getting_started/deploy_caii_applications.md
   - Evaluation:
       - Datasets: evaluation/datasets.md
       - LLM Endpoint: evaluation/llm_endpoint.md

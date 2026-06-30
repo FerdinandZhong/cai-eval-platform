@@ -24,9 +24,9 @@
 | `JUDGE_LLM_URL` | — | Default judge LLM base URL for Ragas metrics |
 | `JUDGE_LLM_API_KEY` | — | API key for the judge LLM |
 
-## CML / CAI deployment
+## CAI deployment
 
-| Variable | Injected by CML | Description |
+| Variable | Injected by CAI | Description |
 |----------|----------------|-------------|
 | `CDSW_APP_PORT` | ✓ | Port nginx binds on (the single public port for the Application) |
 | `CDSW_API_URL` | ✓ | Workspace API URL (used by `launch_in_project.py`) |
@@ -37,7 +37,7 @@
 
 | Secret | Description |
 |--------|-------------|
-| `CML_HOST` | CML workspace URL |
+| `CML_HOST` | CAI workspace URL |
 | `CML_API_KEY` | API key with project-create permission |
 | `RUNTIME_IDENTIFIER` | Full ML Runtime identifier string |
-| `GH_PAT` | GitHub PAT for repo access from CML |
+| `GH_PAT` | GitHub PAT for repo access from CAI |

@@ -4,7 +4,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                  CML Application                     │
+│                  CAI Application                     │
 │                                                     │
 │   nginx (CDSW_APP_PORT)                             │
 │     ├── /        →  Phoenix  (:6006)                │
@@ -48,15 +48,15 @@ For Agent Studio workflows, `crew_task_*` events are converted to child spans.
 | Span export | `backend/trace/workflow_events_to_spans.py` |
 | Ragas metrics | `backend/metrics/ragas_agent.py` |
 | Web UI | `backend/static/index.html` |
-| CML launcher | `cai_integration/start_platform.py` |
+| CAI launcher | `cai_integration/start_platform.py` |
 
-## CML job chain
+## CAI job chain
 
 ```
 GitHub Actions
   │
-  ├── setup-project     create / find CML project
+  ├── setup-project     create / find CAI project
   ├── create-jobs       register git_sync + setup_eval_env jobs
-  ├── trigger-setup-env trigger git_sync → CML auto-triggers setup_eval_env
+  ├── trigger-setup-env trigger git_sync → CAI auto-triggers setup_eval_env
   └── launch-applications  create / restart the co-located Application
 ```
