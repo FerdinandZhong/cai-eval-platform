@@ -52,8 +52,14 @@ def setup_tracing() -> None:
         _initialized = True
 
 
-def eval_example_span(job_id: str, example_id: str, dataset_id: str):
-    """Context manager for per-example eval span."""
+def eval_example_span(job_id: str, example_id: str, dataset_id: str,
+                      project_name: str = "cai-eval"):
+    """Context manager for per-example eval span.
+
+    Phoenix routes spans to a project by the 'openinference.project.name'
+    attribute on the root span.  Pass dataset_id + model_name as the project
+    so each experiment run appears in its own Phoenix project.
+    """
     from opentelemetry import trace
 
     tracer = trace.get_tracer("cai-eval-platform")
@@ -63,5 +69,6 @@ def eval_example_span(job_id: str, example_id: str, dataset_id: str):
             "eval.job_id": job_id,
             "eval.example_id": example_id,
             "eval.dataset_id": dataset_id,
+            "openinference.project.name": project_name,
         },
     )

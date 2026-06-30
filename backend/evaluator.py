@@ -291,7 +291,8 @@ def _evaluate_example(
     }
 
     setup_tracing()
-    with eval_example_span(job.id, example_id, job.dataset_id):
+    project_name = f"{job.dataset_id}_{job.model_name}" if job.model_name and job.model_name != "default" else job.dataset_id
+    with eval_example_span(job.id, example_id, job.dataset_id, project_name=project_name):
         if job.target_type == "agent_studio":
             ctx = EvalContext(
                 job_id=job.id,
