@@ -401,6 +401,39 @@ tr:last-child td { border-bottom: none; }
   gap: 10px;
   flex-wrap: wrap;
 }
+.dc-edit-form {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  padding-top: 14px;
+}
+.dc-edit-form label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+  display: block;
+}
+.dc-edit-form input,
+.dc-edit-form textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--light-gray);
+  color: var(--near-black);
+  resize: vertical;
+}
+.dc-edit-form .dc-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
 .uploaded-badge {
   display: inline-flex;
   align-items: center;
@@ -808,7 +841,7 @@ function renderDatasetCards() {
     return;
   }
   container.innerHTML = _datasets.map(ds => `
-    <div class="dataset-card">
+    <div class="dataset-card" id="dc-${ds.id}">
       <div class="dc-name">${esc(ds.name)}</div>
       <div class="dc-desc">${esc(ds.description || '')}</div>
       <div class="dc-meta">
@@ -820,9 +853,49 @@ function renderDatasetCards() {
           ? '<span class="uploaded-badge">✓ In Phoenix</span>'
           : `<button class="btn btn-primary btn-sm" onclick="uploadToPhoenix('${ds.id}', this)">Upload to Phoenix</button>`
         }
+        <button class="btn btn-secondary btn-sm" onclick="toggleEditDataset('${ds.id}')">Edit</button>
+      </div>
+      <div class="dc-edit-form" id="dc-edit-${ds.id}" style="display:none">
+        <div>
+          <label>Name</label>
+          <input id="dc-edit-name-${ds.id}" type="text" value="${esc(ds.name)}">
+        </div>
+        <div>
+          <label>Description</label>
+          <input id="dc-edit-desc-${ds.id}" type="text" value="${esc(ds.description || '')}">
+        </div>
+        <div>
+          <label>System Prompt</label>
+          <textarea id="dc-edit-prompt-${ds.id}" rows="4">${esc(ds.system_prompt || '')}</textarea>
+        </div>
+        <div class="dc-edit-actions">
+          <button class="btn btn-secondary btn-sm" onclick="toggleEditDataset('${ds.id}')">Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="saveDataset('${ds.id}')">Save</button>
+        </div>
       </div>
     </div>
   `).join('');
+}
+
+function toggleEditDataset(id) {
+  const form = document.getElementById(`dc-edit-${id}`);
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveDataset(id) {
+  const name   = document.getElementById(`dc-edit-name-${id}`).value.trim();
+  const desc   = document.getElementById(`dc-edit-desc-${id}`).value.trim();
+  const prompt = document.getElementById(`dc-edit-prompt-${id}`).value;
+  try {
+    const r = await fetch(`api/datasets/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description: desc, system_prompt: prompt }),
+    });
+    if (!r.ok) { alert('Save failed'); return; }
+    toggleEditDataset(id);
+    await fetchDatasets();
+  } catch (e) { alert('Save failed: ' + e.message); }
 }
 
 async function uploadToPhoenix(datasetId, btn) {

@@ -206,7 +206,7 @@ def main() -> None:
     api_env = dict(os.environ)
     api_env["PHOENIX_BASE_URL"] = f"http://127.0.0.1:{PHOENIX_PORT}"
     api_env["DATA_DIR"] = str(DATA_DIR)
-    api_env["DATASETS_DIR"] = str(REPO_ROOT / "backend" / "datasets")
+    api_env["DATASETS_DIR"] = str(REPO_ROOT / "datasets")
     print(f"\n[2/3] starting eval API: uvicorn main:app on 127.0.0.1:{MANAGER_PORT}")
     api_proc = subprocess.Popen(
         [venv_python(), "-m", "uvicorn", "main:app",

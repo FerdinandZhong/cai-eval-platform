@@ -206,6 +206,21 @@ def discover_workflow(body: WorkflowDiscoverRequest):
         raise HTTPException(502, str(e)) from e
 
 
+@app.patch("/api/datasets/{dataset_id}")
+def update_dataset_metadata(dataset_id: str, body: dict):
+    meta_file = DATASETS_DIR / dataset_id / "metadata.json"
+    if not meta_file.exists():
+        raise HTTPException(404, f"Dataset '{dataset_id}' not found")
+    meta = json.loads(meta_file.read_text())
+    allowed = {"name", "description", "system_prompt", "size", "task_type",
+               "input_fields", "reference_fields", "default_metrics"}
+    for k, v in body.items():
+        if k in allowed:
+            meta[k] = v
+    meta_file.write_text(json.dumps(meta, indent=2))
+    return {"updated": dataset_id, "metadata": meta}
+
+
 @app.post("/api/datasets/{dataset_id}/upload")
 def upload_dataset_to_phoenix(dataset_id: str):
     val_file = DATASETS_DIR / dataset_id / "validation.json"
