@@ -87,13 +87,19 @@ def install_nginx():
     nginx_bin = str(home / ".local" / "bin" / "nginx")
     os.makedirs(str(home / ".local" / "bin"), exist_ok=True)
 
-    # Step 1: already installed?
+    # Step 1: already installed? Also verify rewrite module is present.
+    # Earlier builds used --without-http_rewrite_module which breaks 'return'.
     if os.path.exists(nginx_bin):
-        result = subprocess.run([nginx_bin, "-v"], capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"  Nginx already installed: {result.stderr.strip()}")
+        v = subprocess.run([nginx_bin, "-v"], capture_output=True, text=True)
+        V = subprocess.run([nginx_bin, "-V"], capture_output=True, text=True)
+        config_flags = (V.stdout + V.stderr)
+        if v.returncode == 0 and "--without-http_rewrite_module" not in config_flags:
+            print(f"  Nginx already installed: {v.stderr.strip()}")
             return True
-        print("  Existing nginx binary is broken — reinstalling...")
+        if "--without-http_rewrite_module" in config_flags:
+            print("  Existing nginx missing rewrite module — recompiling...")
+        else:
+            print("  Existing nginx binary is broken — reinstalling...")
         os.remove(nginx_bin)
 
     # Step 2: system nginx on PATH? Verify it actually runs before symlinking —
@@ -147,7 +153,7 @@ def install_nginx():
                 f"--pid-path={nginx_prefix}/run/nginx.pid",
                 f"--error-log-path={nginx_prefix}/logs/error.log",
                 f"--http-log-path={nginx_prefix}/logs/access.log",
-                "--without-http_rewrite_module",
+                "--without-pcre",        # no regex dep; keeps rewrite module + 'return'
                 "--without-http_gzip_module",
                 "--without-mail_smtp_module",
                 "--without-mail_imap_module",
