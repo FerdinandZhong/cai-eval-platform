@@ -3,6 +3,7 @@
 import ragas_compat  # noqa: F401 — must load before any ragas import
 
 import json
+import logging
 import os
 import threading
 from pathlib import Path
@@ -73,10 +74,17 @@ class WorkflowDiscoverRequest(BaseModel):
     api_key: str = ""
 
 
+class _HealthCheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return "GET /api/health" not in msg and "GET / HTTP" not in msg
+
+
 @app.on_event("startup")
 def on_startup():
     setup_tracing()
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
 
 
 def _list_datasets() -> list:
