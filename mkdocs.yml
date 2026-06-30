@@ -1,0 +1,64 @@
+site_name: CAI Eval Platform
+site_description: >-
+  Model and agentic workflow evaluation platform with Arize Phoenix tracing —
+  LLM endpoint benchmarks, Agent Studio workflow testing, and Ragas metrics.
+site_url: https://ferdinandzhong.github.io/cai-eval-platform/
+
+repo_name: FerdinandZhong/cai-eval-platform
+repo_url: https://github.com/FerdinandZhong/cai-eval-platform
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.sections
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Quick Start: getting_started/quickstart.md
+      - Deployment:
+          - Docker: getting_started/deploy_docker.md
+          - CML / CAI Workbench: getting_started/deploy_cml.md
+  - Evaluation:
+      - Datasets: evaluation/datasets.md
+      - LLM Endpoint: evaluation/llm_endpoint.md
+      - Agent Studio Workflow: evaluation/agent_studio.md
+      - Metrics: evaluation/metrics.md
+  - Sample Workflows:
+      - Analytics Q&A: sample_workflows/analytics_qa.md
+  - Reference:
+      - API Reference: reference/api.md
+      - Environment Variables: reference/env_vars.md
+      - Architecture: reference/architecture.md
