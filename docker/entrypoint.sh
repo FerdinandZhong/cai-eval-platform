@@ -42,6 +42,10 @@ http {
         listen      ${APP_PORT};
         server_name _;
 
+        location = / {
+            return 302 /app/;
+        }
+
         location /app/ {
             proxy_pass         http://127.0.0.1:${MANAGER_PORT}/;
             proxy_set_header   Host \$host;
@@ -113,8 +117,8 @@ except Exception:
 done
 
 echo ""
-echo "  Web UI   : http://<host>:8080/app/"
-echo "  Phoenix  : http://<host>:8080/"
+echo "  Web UI   : http://<host>:8080/  (redirects to /app/)"
+echo "  Phoenix  : http://<host>:8080/  (direct)"
 echo "  Health   : http://<host>:8080/app/api/health"
 echo ""
 
