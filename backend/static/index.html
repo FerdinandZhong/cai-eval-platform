@@ -464,6 +464,62 @@ tr:last-child td { border-bottom: none; }
 }
 .metric-config-panel .form-row { margin-bottom: 0; }
 
+/* ── Metrics catalog ─────────────────────────────────────────────────────── */
+.metrics-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+.metric-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.metric-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.metric-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: monospace;
+  color: var(--near-black);
+}
+.metric-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.metric-badge.builtin  { background: #e8f0fe; color: #1a56cc; }
+.metric-badge.custom   { background: #fef3c7; color: #92400e; }
+.metric-badge.binary   { background: #f0fdf4; color: #166534; }
+.metric-badge.continuous { background: #f5f3ff; color: #5b21b6; }
+.metric-card-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+.metric-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.metric-tag {
+  font-size: 11px;
+  background: var(--light-gray);
+  color: #555;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
 /* ── Utility ──────────────────────────────────────────────────────────────── */
 .notice {
   padding: 12px 16px;
@@ -512,6 +568,7 @@ footer {
     <li><a href="#evaluate">Evaluate</a></li>
     <li><a href="#jobs">Jobs</a></li>
     <li><a href="#datasets">Datasets</a></li>
+    <li><a href="#metrics-catalog">Metrics</a></li>
   </ul>
   <a id="phoenix-link" class="nav-phoenix" href="/" target="_blank">Open Phoenix ↗</a>
   <div id="nav-status" class="nav-status offline" title="Phoenix status"></div>
@@ -729,11 +786,20 @@ footer {
   </div>
 </section>
 
+<!-- ── Metrics catalog ────────────────────────────────────────────────────── -->
+<section class="dark" id="metrics-catalog">
+  <div class="section-inner">
+    <h2 class="section-heading dark">Metrics</h2>
+    <p class="section-sub dark">All registered evaluation metrics — built-in and custom. Select metrics when running an evaluation above.</p>
+    <div id="metrics-catalog-grid" class="metrics-catalog"></div>
+  </div>
+</section>
+
 <!-- ── Define Metric ──────────────────────────────────────────────────────── -->
 <section class="light" id="define-metric">
   <div class="section-inner">
-    <h2 class="section-heading light">Define Custom Metric</h2>
-    <p class="section-sub">Write a Python <code>score(pred, gold, **kw)</code> function. You can <code>import</code> any package installed in the eval environment (e.g. <code>rouge_score</code>, <code>bert_score</code>). The metric is registered immediately — no restart required.</p>
+    <h2 class="section-heading light">Register Custom Metric</h2>
+    <p class="section-sub">Write a Python <code>score(pred, gold, **kw)</code> function and register it via the API — no server restart needed. You can <code>import</code> any package installed in the eval environment (e.g. <code>rouge_score</code>, <code>bert_score</code>).</p>
 
     <div id="metric-notice" class="hidden"></div>
 
@@ -782,7 +848,7 @@ function onTargetChange() {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
-  await Promise.all([fetchHealth(), fetchDatasets(), fetchMetrics()]);
+  await Promise.all([fetchHealth(), fetchDatasets(), fetchMetrics(), fetchAllMetrics()]);
   onTargetChange();
   setInterval(fetchJobs, 3000);
   fetchJobs();
@@ -936,6 +1002,37 @@ async function fetchMetrics(taskType) {
     _metrics = d.metrics || [];
     renderMetrics();
   } catch (_) {}
+}
+
+async function fetchAllMetrics() {
+  try {
+    const r = await fetch('api/metrics');
+    const d = await r.json();
+    renderMetricsCatalog(d.metrics || []);
+  } catch (_) {}
+}
+
+function renderMetricsCatalog(metrics) {
+  const grid = document.getElementById('metrics-catalog-grid');
+  if (!grid) return;
+  if (!metrics.length) {
+    grid.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:14px">No metrics registered.</p>';
+    return;
+  }
+  grid.innerHTML = metrics.map(m => {
+    const isCustom = m.custom || false;
+    const tags = (m.task_types || []).map(t => `<span class="metric-tag">${esc(t)}</span>`).join('');
+    return `
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-card-name">${esc(m.name)}</span>
+          <span class="metric-badge ${isCustom ? 'custom' : 'builtin'}">${isCustom ? 'custom' : 'built-in'}</span>
+          <span class="metric-badge ${m.type === 'binary' ? 'binary' : 'continuous'}">${esc(m.type || 'continuous')}</span>
+        </div>
+        <div class="metric-card-desc">${esc(m.description || '—')}</div>
+        <div class="metric-card-tags">${tags}</div>
+      </div>`;
+  }).join('');
 }
 
 function renderMetrics() {
@@ -1237,6 +1334,7 @@ async function defineMetric() {
       document.getElementById('metric-desc').value = '';
       document.getElementById('metric-code').value = '';
       fetchMetrics();
+      fetchAllMetrics();
     } else {
       showNotice('metric-notice', 'error', d.detail || d.error || 'Failed to define metric.');
     }

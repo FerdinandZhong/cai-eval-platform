@@ -39,6 +39,7 @@ def list_metrics(task_type: Optional[str] = None) -> list[dict]:
                 "requires_config": m["requires_config"],
                 "config_fields": m["config_fields"],
                 "task_types": m.get("task_types", []),
+                "custom": m.get("custom", False),
             }
         )
     return out
@@ -66,6 +67,7 @@ def load_custom_metrics(data_dir: Path) -> None:
                 ns.get("METRIC_TYPE", "continuous"),
                 task_types=ns.get("TASK_TYPES", ["text2sql", "agent", "general"]),
             )
+            METRICS[name]["custom"] = True
         except Exception:
             pass
 

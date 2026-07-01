@@ -327,6 +327,7 @@ def define_metric(body: dict):
 
     # Register immediately — no restart needed
     register_metric(name, fn, description, metric_type, task_types=task_types)
+    METRICS[name]["custom"] = True
 
     return {"defined": name}
 
