@@ -290,12 +290,23 @@ def define_metric(body: dict):
     if not code:
         raise HTTPException(400, "'code' is required — provide a Python function named 'score'")
 
+    def _import_error_msg(e: ImportError) -> str:
+        pkg = getattr(e, "name", None) or str(e).removeprefix("No module named ").strip("'")
+        return (
+            f"Package '{pkg}' is not installed in the eval environment.\n"
+            f"Install it first:\n"
+            f"  /home/cdsw/.venv/bin/pip install {pkg}\n"
+            f"Then re-register the metric."
+        )
+
     # Validate: exec the code and check that score() is callable
     try:
         ns: dict = {}
         exec(compile(code, "<custom_metric>", "exec"), ns)  # noqa: S102
     except SyntaxError as e:
         raise HTTPException(400, f"Syntax error: {e}") from e
+    except ImportError as e:
+        raise HTTPException(400, _import_error_msg(e)) from e
     except Exception as e:
         raise HTTPException(400, f"Error executing metric code: {e}") from e
 
@@ -311,7 +322,7 @@ def define_metric(body: dict):
     except TypeError as e:
         raise HTTPException(400, f"Dry-run failed: {e}") from e
     except ImportError as e:
-        raise HTTPException(400, f"Import error — package not available in eval env: {e}") from e
+        raise HTTPException(400, _import_error_msg(e)) from e
     except Exception as e:
         raise HTTPException(400, f"Dry-run error: {e}") from e
 

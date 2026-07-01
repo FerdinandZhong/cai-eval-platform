@@ -201,7 +201,8 @@ def test_define_metric_import_error(client):
         ),
     })
     assert r.status_code == 400
-    assert "Import error" in r.json()["detail"] or "Error" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert "not installed" in detail or "Import error" in detail or "Error" in detail
 
 
 def test_define_metric_wrong_return_type(client):
