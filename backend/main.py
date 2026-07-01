@@ -303,6 +303,18 @@ def define_metric(body: dict):
     if not callable(fn):
         raise HTTPException(400, "Code must define a callable named 'score'")
 
+    # Dry-run: call score("test", "test") to catch import errors and wrong signatures
+    try:
+        result = fn("test", "test")
+        if not isinstance(result, (int, float, bool)):
+            raise TypeError(f"score() must return a numeric value, got {type(result).__name__}")
+    except TypeError as e:
+        raise HTTPException(400, f"Dry-run failed: {e}") from e
+    except ImportError as e:
+        raise HTTPException(400, f"Import error — package not available in eval env: {e}") from e
+    except Exception as e:
+        raise HTTPException(400, f"Dry-run error: {e}") from e
+
     description = body.get("description") or ns.get("DESCRIPTION", "")
     metric_type = body.get("type") or ns.get("METRIC_TYPE", "continuous")
     task_types = ns.get("TASK_TYPES", ["text2sql", "agent", "general"])
