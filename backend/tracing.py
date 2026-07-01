@@ -33,12 +33,15 @@ def setup_tracing() -> None:
             or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
             or f"{phoenix_base_url()}/v1/traces"
         )
-        project = os.environ.get("PHOENIX_PROJECT", "cai-eval")
-
         try:
             from phoenix.otel import register
 
-            register(project_name=project, endpoint=endpoint)
+            # Do NOT set project_name here — it would become a resource attribute
+            # that Phoenix uses to route ALL spans to one project, overriding
+            # the per-span "openinference.project.name" attribute we set in
+            # eval_example_span().  Omitting it lets Phoenix respect the span
+            # attribute and route each eval run to its own project.
+            register(endpoint=endpoint)
         except Exception as e:
             print(f"[tracing] Phoenix OTEL register failed: {e}", flush=True)
 
