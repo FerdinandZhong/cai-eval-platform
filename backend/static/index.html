@@ -473,7 +473,7 @@ tr:last-child td { border-bottom: none; }
 }
 .metric-card {
   background: var(--white);
-  border: 1px solid var(--border);
+  border: 1px solid #e0e0e0;
   border-radius: 10px;
   padding: 16px 18px;
 }
@@ -496,6 +496,8 @@ tr:last-child td { border-bottom: none; }
   border-radius: 20px;
   letter-spacing: 0.3px;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .metric-badge.builtin  { background: #e8f0fe; color: #1a56cc; }
 .metric-badge.custom   { background: #fef3c7; color: #92400e; }
@@ -503,7 +505,7 @@ tr:last-child td { border-bottom: none; }
 .metric-badge.continuous { background: #f5f3ff; color: #5b21b6; }
 .metric-card-desc {
   font-size: 13px;
-  color: var(--muted);
+  color: #555;
   line-height: 1.45;
   margin-bottom: 8px;
 }
@@ -808,12 +810,12 @@ footer {
       <input type="text" id="metric-name" placeholder="rouge_l">
     </div>
     <div class="form-group">
-      <label for="metric-desc">Description <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <label for="metric-desc">Description <span style="font-weight:400;color:#888">(optional)</span></label>
       <input type="text" id="metric-desc" placeholder="ROUGE-L score between prediction and reference">
     </div>
     <div class="form-group">
       <label for="metric-code">Python Implementation</label>
-      <textarea id="metric-code" rows="12" style="font-family:monospace;font-size:13px;resize:vertical;width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:#f8f9fa;color:var(--text);box-sizing:border-box;" spellcheck="false" placeholder="def score(pred, gold, **kw):
+      <textarea id="metric-code" rows="12" style="font-family:monospace;font-size:13px;resize:vertical;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:#f8f9fa;color:#1d1d1f;box-sizing:border-box;" spellcheck="false" placeholder="def score(pred, gold, **kw):
     # pred: model output string
     # gold: reference / expected string
     # kw:   extra context (config, user_input, etc.)
