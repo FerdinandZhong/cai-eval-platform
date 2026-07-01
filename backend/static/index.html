@@ -732,20 +732,29 @@ footer {
 <!-- ── Define Metric ──────────────────────────────────────────────────────── -->
 <section class="light" id="define-metric">
   <div class="section-inner">
-    <h2 class="section-heading light">Define Metric</h2>
-    <p class="section-sub">Register a new evaluation metric by name. Built-in Python implementations are added in code; this registers the metadata.</p>
+    <h2 class="section-heading light">Define Custom Metric</h2>
+    <p class="section-sub">Write a Python <code>score(pred, gold, **kw)</code> function. You can <code>import</code> any package installed in the eval environment (e.g. <code>rouge_score</code>, <code>bert_score</code>). The metric is registered immediately — no restart required.</p>
 
     <div id="metric-notice" class="hidden"></div>
 
     <div class="form-group">
       <label for="metric-name">Metric Name</label>
-      <input type="text" id="metric-name" placeholder="exact_match">
+      <input type="text" id="metric-name" placeholder="rouge_l">
     </div>
     <div class="form-group">
-      <label for="metric-desc">Description</label>
-      <input type="text" id="metric-desc" placeholder="Exact string match between predicted and gold SQL">
+      <label for="metric-desc">Description <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <input type="text" id="metric-desc" placeholder="ROUGE-L score between prediction and reference">
     </div>
-    <button class="btn btn-secondary" onclick="defineMetric()">Define Metric</button>
+    <div class="form-group">
+      <label for="metric-code">Python Implementation</label>
+      <textarea id="metric-code" rows="12" style="font-family:monospace;font-size:13px;resize:vertical;width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:#f8f9fa;color:var(--text);box-sizing:border-box;" spellcheck="false" placeholder="def score(pred, gold, **kw):
+    # pred: model output string
+    # gold: reference / expected string
+    # kw:   extra context (config, user_input, etc.)
+    # Return a float in [0, 1] or a bool
+    return float(pred.strip() == gold.strip())"></textarea>
+    </div>
+    <button class="btn btn-secondary" onclick="defineMetric()">Register Metric</button>
   </div>
 </section>
 
@@ -1211,20 +1220,25 @@ async function uploadDataset() {
 async function defineMetric() {
   const name = document.getElementById('metric-name').value.trim();
   const desc = document.getElementById('metric-desc').value.trim();
+  const code = document.getElementById('metric-code').value.trim();
   if (!name) { showNotice('metric-notice', 'info', 'Metric name is required.'); return; }
+  if (!code) { showNotice('metric-notice', 'info', 'Python implementation is required.'); return; }
 
   try {
     const r = await fetch('api/metrics/define', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc }),
+      body: JSON.stringify({ name, description: desc, code }),
     });
     const d = await r.json();
     if (r.ok) {
-      showNotice('metric-notice', 'success', `Metric "${name}" defined. ${d.note || ''}`);
+      showNotice('metric-notice', 'success', `Metric "${name}" registered and ready to use.`);
+      document.getElementById('metric-name').value = '';
+      document.getElementById('metric-desc').value = '';
+      document.getElementById('metric-code').value = '';
       fetchMetrics();
     } else {
-      showNotice('metric-notice', 'error', d.error || 'Failed to define metric.');
+      showNotice('metric-notice', 'error', d.detail || d.error || 'Failed to define metric.');
     }
   } catch (e) {
     showNotice('metric-notice', 'error', e.message);

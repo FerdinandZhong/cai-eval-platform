@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 import evaluator
 import phoenix_client
 from dataset_schema import load_metadata, load_records
-from metrics import METRICS, list_metrics
+from metrics import METRICS, list_metrics, load_custom_metrics, register as register_metric
 from targets.agent_studio import AgentStudioConfig, AgentStudioClient
 from tracing import setup_tracing
 
@@ -85,6 +85,7 @@ def on_startup():
     setup_tracing()
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
     logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
+    load_custom_metrics(DATA_DIR)
 
 
 def _list_datasets() -> list:
@@ -285,20 +286,37 @@ def define_metric(body: dict):
     if name in METRICS:
         raise HTTPException(409, f"Metric '{name}' already exists")
 
+    code = (body.get("code") or "").strip()
+    if not code:
+        raise HTTPException(400, "'code' is required — provide a Python function named 'score'")
+
+    # Validate: exec the code and check that score() is callable
+    try:
+        ns: dict = {}
+        exec(compile(code, "<custom_metric>", "exec"), ns)  # noqa: S102
+    except SyntaxError as e:
+        raise HTTPException(400, f"Syntax error: {e}") from e
+    except Exception as e:
+        raise HTTPException(400, f"Error executing metric code: {e}") from e
+
+    fn = ns.get("score")
+    if not callable(fn):
+        raise HTTPException(400, "Code must define a callable named 'score'")
+
+    description = body.get("description") or ns.get("DESCRIPTION", "")
+    metric_type = body.get("type") or ns.get("METRIC_TYPE", "continuous")
+    task_types = ns.get("TASK_TYPES", ["text2sql", "agent", "general"])
+
+    # Persist as .py for survival across restarts
     metrics_dir = DATA_DIR / "custom_metrics"
     metrics_dir.mkdir(parents=True, exist_ok=True)
-    (metrics_dir / f"{name}.json").write_text(
-        json.dumps(
-            {
-                "name": name,
-                "description": body.get("description", ""),
-                "type": body.get("type", "binary"),
-                "custom": True,
-            },
-            indent=2,
-        )
-    )
-    return {"defined": name, "note": "Custom metric saved. Restart to activate."}
+    header = f'DESCRIPTION = {json.dumps(description)}\nMETRIC_TYPE = {json.dumps(metric_type)}\nTASK_TYPES = {json.dumps(task_types)}\n\n'
+    (metrics_dir / f"{name}.py").write_text(header + code)
+
+    # Register immediately — no restart needed
+    register_metric(name, fn, description, metric_type, task_types=task_types)
+
+    return {"defined": name}
 
 
 @app.post("/api/jobs/{job_id}/results")

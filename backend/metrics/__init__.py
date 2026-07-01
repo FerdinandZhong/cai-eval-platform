@@ -1,5 +1,6 @@
 """Metric registry for evaluation benchmarks."""
 
+from pathlib import Path
 from typing import Callable, Optional
 
 METRICS: dict[str, dict] = {}
@@ -41,6 +42,32 @@ def list_metrics(task_type: Optional[str] = None) -> list[dict]:
             }
         )
     return out
+
+
+def load_custom_metrics(data_dir: Path) -> None:
+    """Load persisted custom metric .py files from DATA_DIR/custom_metrics/."""
+    custom_dir = data_dir / "custom_metrics"
+    if not custom_dir.exists():
+        return
+    for py_file in sorted(custom_dir.glob("*.py")):
+        name = py_file.stem
+        if name in METRICS:
+            continue
+        try:
+            ns: dict = {}
+            exec(compile(py_file.read_text(), str(py_file), "exec"), ns)  # noqa: S102
+            fn = ns.get("score")
+            if not callable(fn):
+                continue
+            register(
+                name,
+                fn,
+                ns.get("DESCRIPTION", ""),
+                ns.get("METRIC_TYPE", "continuous"),
+                task_types=ns.get("TASK_TYPES", ["text2sql", "agent", "general"]),
+            )
+        except Exception:
+            pass
 
 
 from . import component_match as _cm
