@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAI Eval POC — On-Prem Model Benchmark on Azure AKS</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2d3150;
+    --accent: #6c8ff5;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --accent4: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #7c85a2;
+    --red: #f87171;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --orange: #fb923c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .page { max-width: 1140px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 48px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: rgba(108,143,245,0.12);
+    border: 1px solid rgba(108,143,245,0.3);
+    color: var(--accent);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 32px; font-weight: 700; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #e2e8f0 30%, #6c8ff5);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 10px;
+  }
+  .hero p { color: var(--muted); font-size: 15px; }
+
+  /* Warning banner */
+  .warn-banner {
+    background: rgba(251,146,60,0.08);
+    border: 1px solid rgba(251,146,60,0.3);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .warn-banner .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .warn-banner strong { color: var(--orange); }
+
+  /* Section headers */
+  .section-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+  }
+  .section-header .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .section-header h2 {
+    font-size: 16px; font-weight: 600;
+    letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted);
+  }
+  .section { margin-bottom: 48px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+
+  /* Model cards */
+  .model-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .model-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; transition: border-color 0.2s;
+    position: relative;
+  }
+  .model-card:hover { border-color: var(--accent); }
+  .model-card .num {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 10px;
+  }
+  .model-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+  .model-card .hf-id { font-size: 11px; color: var(--muted); font-family: monospace; margin-bottom: 10px; }
+  .model-card .lab { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .pill {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 6px; margin: 2px 2px 2px 0;
+  }
+  .pill-blue   { background: rgba(108,143,245,0.15); color: #a5b8ff; }
+  .pill-green  { background: rgba(52,211,153,0.12);  color: #6ee7b7; }
+  .pill-amber  { background: rgba(251,191,36,0.12);  color: #fcd34d; }
+  .pill-violet { background: rgba(167,139,250,0.15); color: #c4b5fd; }
+  .pill-orange { background: rgba(251,146,60,0.15);  color: #fdba74; }
+  .pill-red    { background: rgba(248,113,113,0.15); color: #fca5a5; }
+
+  .spec-row {
+    display: flex; justify-content: space-between; align-items: center;
+    border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px;
+    font-size: 12px;
+  }
+  .spec-row .label { color: var(--muted); }
+  .spec-row .value { font-weight: 600; }
+  .gpu-bar-outer { background: var(--border); border-radius: 4px; height: 6px; margin-top: 10px; overflow: hidden; }
+  .gpu-bar-inner { height: 100%; border-radius: 4px; }
+
+  /* Quant badge */
+  .quant-badge {
+    position: absolute; top: 14px; right: 14px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    padding: 2px 8px; border-radius: 5px;
+  }
+
+  /* Two-node topology */
+  .topo-wrap { display: flex; flex-direction: column; gap: 14px; }
+  .node-wrap {
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  }
+  .node-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface2); padding: 10px 18px;
+    font-size: 12px; font-weight: 600;
+  }
+  .node-header .node-name { font-size: 13px; font-weight: 700; }
+  .node-header .node-sku { font-family: monospace; font-size: 11px; color: var(--muted); }
+  .node-header .node-price { color: var(--yellow); font-size: 12px; }
+  .node-body {
+    background: var(--surface); padding: 16px 18px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  .node-body.single { grid-template-columns: 1fr; }
+
+  .gpu-layout { display: flex; flex-direction: column; gap: 8px; }
+  .gpu-layout .nvlink-bar {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--accent3); margin: 4px 0;
+  }
+  .gpu-layout .nvlink-bar hr { flex: 1; border: none; border-top: 1px dashed var(--accent3); opacity: 0.35; }
+  .gpu-row { display: flex; align-items: center; gap: 8px; }
+  .gpu-chip {
+    font-size: 10px; font-weight: 700; padding: 3px 7px;
+    border-radius: 5px; border: 1px solid; min-width: 52px; text-align: center;
+  }
+  .gpu-a100    { border-color: #6c8ff555; background: rgba(108,143,245,0.1); color: #a5b8ff; }
+  .gpu-h100    { border-color: #f59e0b55; background: rgba(245,158,11,0.1); color: #fcd34d; }
+  .gpu-m1      { border-color: #6c8ff555; background: rgba(108,143,245,0.12); color: #a5b8ff; }
+  .gpu-m2      { border-color: #a78bfa55; background: rgba(167,139,250,0.12); color: #c4b5fd; }
+  .gpu-m3      { border-color: #f59e0b55; background: rgba(245,158,11,0.12); color: #fcd34d; }
+  .gpu-spare   { border-color: var(--border); background: transparent; color: var(--muted); }
+  .gpu-row .arrow { color: var(--muted); font-size: 12px; }
+  .gpu-row .model-label { font-size: 12px; font-weight: 500; }
+  .gpu-row .tp-label { font-size: 11px; color: var(--muted); margin-left: 4px; }
+
+  .endpoint-list { display: flex; flex-direction: column; gap: 8px; }
+  .endpoint-box {
+    border-radius: 8px; padding: 10px 12px;
+  }
+  .endpoint-box .ep-title { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+  .endpoint-box code { font-size: 10px; color: var(--muted); line-height: 1.6; display: block; }
+  .ep-gemma  { background: rgba(108,143,245,0.08); border: 1px solid rgba(108,143,245,0.2); }
+  .ep-qwen   { background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.2); }
+  .ep-glm    { background: rgba(245,158,11,0.08);  border: 1px solid rgba(245,158,11,0.25); }
+
+  /* Stat tiles */
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 48px;
+  }
+  .stat-tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .stat-tile .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .stat-tile .value { font-size: 24px; font-weight: 700; }
+  .stat-tile .sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .stat-tile.accent .value { color: var(--accent); }
+  .stat-tile.green  .value { color: var(--green); }
+  .stat-tile.amber  .value { color: var(--yellow); }
+  .stat-tile.orange .value { color: var(--orange); }
+
+  /* Charts */
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 48px; }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px;
+  }
+  .chart-card h3 {
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px;
+  }
+  .chart-card canvas { max-height: 200px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--surface2); }
+  th {
+    text-align: left; padding: 10px 14px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr.highlight { background: rgba(108,143,245,0.06); }
+  tr.highlight td { color: var(--accent); font-weight: 600; }
+  tr.recommended { background: rgba(52,211,153,0.05); }
+  tr.recommended td { font-weight: 500; }
+  td.green { color: var(--green); }
+  td.orange { color: var(--orange); }
+  td.muted  { color: var(--muted); }
+  .strike { text-decoration: line-through; color: var(--muted); }
+
+  /* Gantt */
+  .gantt { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .gantt-header {
+    display: grid; grid-template-columns: 200px 1fr 1fr 1fr 1fr;
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted);
+  }
+  .gantt-header div, .gantt-row div { padding: 10px 14px; }
+  .gantt-header .week-col, .gantt-row .week-col { border-left: 1px solid var(--border); text-align: center; }
+  .gantt-row {
+    display: grid; grid-template-columns: 200px 1fr 1fr 1fr 1fr;
+    border-bottom: 1px solid var(--border); align-items: center; font-size: 13px;
+  }
+  .gantt-row:last-child { border-bottom: none; }
+  .task-label { font-weight: 500; }
+  .task-sublabel { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .bar {
+    margin: 6px 8px; height: 22px; border-radius: 5px;
+    display: flex; align-items: center; padding: 0 8px;
+    font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden;
+  }
+  .bar-infra { background: rgba(108,143,245,0.2); color: #a5b8ff; border: 1px solid rgba(108,143,245,0.3); }
+  .bar-eval  { background: rgba(167,139,250,0.2); color: #c4b5fd; border: 1px solid rgba(167,139,250,0.3); }
+  .bar-bench { background: rgba(52,211,153,0.2);  color: #6ee7b7; border: 1px solid rgba(52,211,153,0.3); }
+  .bar-demo  { background: rgba(251,191,36,0.2);  color: #fcd34d; border: 1px solid rgba(251,191,36,0.3); }
+  .bar-empty { background: transparent; }
+
+  .footer {
+    border-top: 1px solid var(--border); padding-top: 24px;
+    font-size: 12px; color: var(--muted); line-height: 1.8;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 800px) {
+    .model-grid, .stat-grid, .chart-row { grid-template-columns: 1fr; }
+    .node-body { grid-template-columns: 1fr; }
+    .gantt-header, .gantt-row { grid-template-columns: 140px 1fr 1fr; }
+    .gantt-header .week-col:nth-child(4),
+    .gantt-header .week-col:nth-child(5),
+    .gantt-row    .week-col:nth-child(4),
+    .gantt-row    .week-col:nth-child(5) { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="badge">POC Design · 1 Month · Azure AKS · 2-Node Topology</div>
+    <h1>On-Prem LLM Benchmark: Retail AI Agent</h1>
+    <p>Gemma 4 31B · Qwen3.6-35B-A3B · GLM-5.2 (AWQ INT4) &nbsp;·&nbsp; vLLM &nbsp;·&nbsp; tau-bench 635 tasks &nbsp;·&nbsp; Phoenix tracing</p>
+  </div>
+
+  <!-- GLM-5.2 size warning -->
+  <div class="warn-banner">
+    <div class="icon">⚠️</div>
+    <div>
+      <strong>GLM-5.2 is 753B MoE</strong> — BF16 weights alone are ~1.5 TB; FP8 is ~753 GB (needs 10+ H100s).
+      The plan below uses <strong>AWQ INT4 quantization (~376 GB)</strong> which fits on a single 8×H100 80 GB node (640 GB pool, TP=8).
+      This is practical for a POC demo; upgrade to FP8 on 2 H100 nodes (~$20K extra/month) for production-quality inference.
+      Gemma 4 31B and Qwen3.6-35B-A3B run in BF16 on a separate A100 node.
+    </div>
+  </div>
+
+  <!-- Stat tiles -->
+  <div class="stat-grid">
+    <div class="stat-tile accent">
+      <div class="label">Total Cost (recommended)</div>
+      <div class="value">~$30.7K</div>
+      <div class="sub">Hybrid: Spot W1–W3, on-demand W4</div>
+    </div>
+    <div class="stat-tile orange">
+      <div class="label">vs original 3-model plan</div>
+      <div class="value">+$16K</div>
+      <div class="sub">GLM-5.2 size forces a 2nd GPU node</div>
+    </div>
+    <div class="stat-tile amber">
+      <div class="label">GPU Nodes</div>
+      <div class="value">2 nodes</div>
+      <div class="sub">A100 node + H100 node (NVLink fabric)</div>
+    </div>
+    <div class="stat-tile green">
+      <div class="label">Tasks</div>
+      <div class="value">635 × 3</div>
+      <div class="sub">tau-bench retail · all 3 models</div>
+    </div>
+  </div>
+
+  <!-- Models -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:var(--accent)"></div>
+      <h2>Model Candidates</h2>
+    </div>
+    <div class="model-grid">
+
+      <div class="model-card">
+        <div class="num">Model 01 — Node A · GPU 0–1</div>
+        <h3>Gemma 4 31B</h3>
+        <div class="hf-id">google/gemma-4-31B-it</div>
+        <div class="lab">Google DeepMind · May 2026 (Google I/O)</div>
+        <span class="pill pill-blue">30.7B dense</span>
+        <span class="pill pill-green">256K context</span>
+        <span class="pill pill-amber">Multimodal</span>
+        <span class="pill pill-violet">Hybrid attention</span>
+        <div class="spec-row"><span class="label">Precision</span><span class="value">BF16</span></div>
+        <div class="spec-row"><span class="label">Weights VRAM</span><span class="value">~62 GB</span></div>
+        <div class="spec-row"><span class="label">Allocation</span><span class="value">TP=2 (GPU 0–1 · 160 GB)</span></div>
+        <div class="spec-row"><span class="label">Per-GPU utilization</span><span class="value">~49%</span></div>
+        <div class="gpu-bar-outer"><div class="gpu-bar-inner" style="width:49%; background: linear-gradient(90deg,#6c8ff5,#a78bfa)"></div></div>
+      </div>
+
+      <div class="model-card">
+        <div class="num">Model 02 — Node A · GPU 2–3</div>
+        <h3>Qwen3.6-35B-A3B</h3>
+        <div class="hf-id">Qwen/Qwen3.6-35B-A3B</div>
+        <div class="lab">Alibaba Qwen · 2026</div>
+        <span class="pill pill-violet">35B total · 3B active</span>
+        <span class="pill pill-green">MoE (256 experts)</span>
+        <span class="pill pill-amber">262K context</span>
+        <span class="pill pill-blue">Hybrid thinking</span>
+        <div class="spec-row"><span class="label">Precision</span><span class="value">BF16</span></div>
+        <div class="spec-row"><span class="label">Weights VRAM</span><span class="value">~70 GB</span></div>
+        <div class="spec-row"><span class="label">Allocation</span><span class="value">TP=2 (GPU 2–3 · 160 GB)</span></div>
+        <div class="spec-row"><span class="label">Per-GPU utilization</span><span class="value">~56%</span></div>
+        <div class="gpu-bar-outer"><div class="gpu-bar-inner" style="width:56%; background: linear-gradient(90deg,#a78bfa,#818cf8)"></div></div>
+      </div>
+
+      <div class="model-card">
+        <div class="quant-badge pill-orange" style="background:rgba(251,146,60,0.15);color:#fdba74;border:1px solid rgba(251,146,60,0.3);">AWQ INT4</div>
+        <div class="num">Model 03 — Node B · GPU 0–7</div>
+        <h3>GLM-5.2</h3>
+        <div class="hf-id">zai-org/GLM-5.2</div>
+        <div class="lab">ZAI · June 17 2026</div>
+        <span class="pill pill-orange">753B total MoE</span>
+        <span class="pill pill-green">1M context</span>
+        <span class="pill pill-blue">IndexShare attn</span>
+        <span class="pill pill-red">BF16 = 1.5 TB ⚠</span>
+        <div class="spec-row"><span class="label">Precision (POC)</span><span class="value" style="color:var(--orange)">AWQ INT4</span></div>
+        <div class="spec-row"><span class="label">Weights VRAM</span><span class="value">~376 GB</span></div>
+        <div class="spec-row"><span class="label">Allocation</span><span class="value">TP=8 (8× H100 · 640 GB)</span></div>
+        <div class="spec-row"><span class="label">Per-GPU utilization</span><span class="value">~74%</span></div>
+        <div class="gpu-bar-outer"><div class="gpu-bar-inner" style="width:74%; background: linear-gradient(90deg,#f59e0b,#fb923c)"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- GPU Topology -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:var(--accent3)"></div>
+      <h2>2-Node GPU Topology — AKS with NVLink fabric</h2>
+    </div>
+    <div class="topo-wrap">
+
+      <!-- Node A -->
+      <div class="node-wrap">
+        <div class="node-header">
+          <div>
+            <div class="node-name">Node A — Gemma 4 31B + Qwen3.6-35B</div>
+            <div class="node-sku">Standard_ND96amsr_A100_v4</div>
+          </div>
+          <div class="node-price">~$27.20/hr on-demand · ~$16.30/hr Spot</div>
+        </div>
+        <div class="node-body">
+          <div class="gpu-layout">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;">8 × A100 80 GB SXM4</div>
+            <div class="nvlink-bar"><hr/>NVLink / NVSwitch (within node)<hr/></div>
+            <div class="gpu-row">
+              <span class="gpu-chip gpu-m1">GPU 0</span>
+              <span class="gpu-chip gpu-m1">GPU 1</span>
+              <span class="arrow">→</span>
+              <span class="model-label" style="color:#a5b8ff">Gemma 4 31B</span>
+              <span class="tp-label">TP=2 · BF16 · ~62 GB</span>
+            </div>
+            <div class="gpu-row">
+              <span class="gpu-chip gpu-m2">GPU 2</span>
+              <span class="gpu-chip gpu-m2">GPU 3</span>
+              <span class="arrow">→</span>
+              <span class="model-label" style="color:#c4b5fd">Qwen3.6-35B-A3B</span>
+              <span class="tp-label">TP=2 · BF16 · ~70 GB</span>
+            </div>
+            <div class="gpu-row" style="margin-top:6px">
+              <span class="gpu-chip gpu-spare">GPU 4</span>
+              <span class="gpu-chip gpu-spare">GPU 5</span>
+              <span class="gpu-chip gpu-spare">GPU 6</span>
+              <span class="gpu-chip gpu-spare">GPU 7</span>
+              <span class="arrow">→</span>
+              <span class="model-label" style="color:var(--muted)">Spare (2nd replicas / A/B runs)</span>
+            </div>
+          </div>
+          <div class="endpoint-list">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;">vLLM endpoints (OpenAI-compat)</div>
+            <div class="endpoint-box ep-gemma">
+              <div class="ep-title" style="color:#a5b8ff">:8001 — google/gemma-4-31B-it</div>
+              <code>CUDA_VISIBLE_DEVICES=0,1 vllm serve \<br>&nbsp;&nbsp;google/gemma-4-31B-it \<br>&nbsp;&nbsp;--tensor-parallel-size 2 --port 8001</code>
+            </div>
+            <div class="endpoint-box ep-qwen">
+              <div class="ep-title" style="color:#c4b5fd">:8002 — Qwen/Qwen3.6-35B-A3B</div>
+              <code>CUDA_VISIBLE_DEVICES=2,3 vllm serve \<br>&nbsp;&nbsp;Qwen/Qwen3.6-35B-A3B \<br>&nbsp;&nbsp;--tensor-parallel-size 2 --port 8002</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node B -->
+      <div class="node-wrap">
+        <div class="node-header" style="border-top: 2px solid rgba(245,158,11,0.4)">
+          <div>
+            <div class="node-name" style="color:var(--yellow)">Node B — GLM-5.2 (AWQ INT4)</div>
+            <div class="node-sku">Standard_ND96isr_H100_v5 &nbsp;·&nbsp; 8 × H100 80 GB SXM5</div>
+          </div>
+          <div class="node-price">~$32.77/hr on-demand · ~$19.70/hr Spot</div>
+        </div>
+        <div class="node-body">
+          <div class="gpu-layout">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;">8 × H100 80 GB SXM5 (640 GB total)</div>
+            <div class="nvlink-bar"><hr/>NVLink / NVSwitch (within node) — inter-node via InfiniBand<hr/></div>
+            <div class="gpu-row">
+              <span class="gpu-chip gpu-m3">GPU 0</span>
+              <span class="gpu-chip gpu-m3">GPU 1</span>
+              <span class="gpu-chip gpu-m3">GPU 2</span>
+              <span class="gpu-chip gpu-m3">GPU 3</span>
+              <span class="arrow">→</span>
+              <span class="model-label" style="color:#fcd34d">GLM-5.2 (shard 0–3)</span>
+            </div>
+            <div class="gpu-row">
+              <span class="gpu-chip gpu-m3">GPU 4</span>
+              <span class="gpu-chip gpu-m3">GPU 5</span>
+              <span class="gpu-chip gpu-m3">GPU 6</span>
+              <span class="gpu-chip gpu-m3">GPU 7</span>
+              <span class="arrow">→</span>
+              <span class="model-label" style="color:#fcd34d">GLM-5.2 (shard 4–7)</span>
+              <span class="tp-label">TP=8 · AWQ INT4 · ~376 GB / 640 GB</span>
+            </div>
+            <div style="margin-top:10px; padding:8px 12px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); border-radius:7px; font-size:11px; color:var(--muted); line-height:1.7;">
+              <strong style="color:#fcd34d">FP8 upgrade path:</strong> GLM-5.2-FP8 (~753 GB) requires 2 nodes × 8× H100.
+              Add a second ND H100 v5 node + cross-node TP=16 via InfiniBand.
+              Extra cost: +$32.77/hr · +$23,594/month on-demand.
+            </div>
+          </div>
+          <div class="endpoint-list">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;">vLLM endpoint</div>
+            <div class="endpoint-box ep-glm">
+              <div class="ep-title" style="color:#fcd34d">:8003 — zai-org/GLM-5.2 (AWQ INT4)</div>
+              <code>CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \<br>&nbsp;&nbsp;vllm serve zai-org/GLM-5.2 \<br>&nbsp;&nbsp;--quantization awq \<br>&nbsp;&nbsp;--tensor-parallel-size 8 \<br>&nbsp;&nbsp;--port 8003</code>
+            </div>
+            <div style="margin-top:8px; padding:8px 12px; background:rgba(52,211,153,0.06); border:1px solid rgba(52,211,153,0.2); border-radius:7px; font-size:11px; color:var(--muted); line-height:1.7;">
+              All 3 endpoints are <strong style="color:var(--accent3)">OpenAI-compatible</strong>.
+              The eval backend swaps models by changing <code style="color:var(--accent)">OPENAI_API_BASE</code>.
+              No other code changes needed.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <h3>Monthly GPU Cost by Scenario (2 nodes)</h3>
+      <canvas id="costChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>VRAM Pool Allocation Across Nodes</h3>
+      <canvas id="vramChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Cost breakdown -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:var(--yellow)"></div>
+      <h2>Cost Breakdown</h2>
+    </div>
+
+    <!-- Per-node SKU table -->
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:16px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Node</th><th>VM SKU</th><th>GPUs</th>
+            <th>On-demand $/hr</th><th>Spot $/hr</th>
+            <th>720 hr on-demand</th><th>720 hr Spot</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>A</td>
+            <td style="font-family:monospace; font-size:12px;">ND96amsr_A100_v4</td>
+            <td>8× A100 80 GB SXM4</td>
+            <td>~$27.20</td><td>~$16.30</td>
+            <td>~$19,584</td><td>~$11,736</td>
+          </tr>
+          <tr>
+            <td>B</td>
+            <td style="font-family:monospace; font-size:12px;">ND96isr_H100_v5</td>
+            <td>8× H100 80 GB SXM5</td>
+            <td>~$32.77</td><td>~$19.70</td>
+            <td>~$23,594</td><td>~$14,184</td>
+          </tr>
+          <tr class="highlight">
+            <td colspan="3"><strong>Combined (Node A + B)</strong></td>
+            <td><strong>~$59.97/hr</strong></td><td><strong>~$36.00/hr</strong></td>
+            <td><strong>~$43,178</strong></td><td><strong>~$25,920</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Scenario table -->
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:16px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th><th>GPU cost</th><th>Ancillary</th><th>Total</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Full on-demand</td>
+            <td>~$43,178</td><td>~$450</td><td>~$43,628</td>
+            <td>Safest, demo-stable throughout</td>
+          </tr>
+          <tr class="recommended">
+            <td>Spot W1–W3 + on-demand W4 ✓ <span class="pill pill-green" style="font-size:10px;">recommended</span></td>
+            <td>~$30,235</td><td>~$450</td><td class="green"><strong>~$30,685</strong></td>
+            <td>Best cost/risk; on-demand only for demo week</td>
+          </tr>
+          <tr>
+            <td>Full Spot</td>
+            <td>~$25,920</td><td>~$450</td><td>~$26,370</td>
+            <td>Preemption risk on demo day</td>
+          </tr>
+          <tr style="background:rgba(251,146,60,0.05)">
+            <td class="orange">GLM-5.2 FP8 upgrade (2× H100 nodes)</td>
+            <td class="orange">+$23,594/mo</td><td>+$100</td><td class="orange">~$67K on-demand</td>
+            <td class="muted">Node B → 2 nodes; TP=16 cross-node via InfiniBand</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Ancillary -->
+    <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:12px;">
+      <div class="card" style="padding:16px;">
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px;">AKS control plane + system nodes</div>
+        <div style="font-weight:700; font-size:18px; color:var(--accent);">~$200/mo</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:4px;">2× D4s v3 system node pool</div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px;">Storage (weights + eval data)</div>
+        <div style="font-weight:700; font-size:18px; color:var(--accent);">~$150/mo</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Azure Files Premium · ~500 GB (GLM INT4 ~190 GB)</div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px;">Outbound networking</div>
+        <div style="font-weight:700; font-size:18px; color:var(--accent);">~$80–100/mo</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Cross-node InfiniBand + eval API egress</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:var(--accent2)"></div>
+      <h2>4-Week Timeline</h2>
+    </div>
+    <div class="gantt">
+      <div class="gantt-header">
+        <div>Work stream</div>
+        <div class="week-col">Week 1</div>
+        <div class="week-col">Week 2</div>
+        <div class="week-col">Week 3</div>
+        <div class="week-col">Week 4</div>
+      </div>
+      <div class="gantt-row">
+        <div>
+          <div class="task-label">Infrastructure</div>
+          <div class="task-sublabel">AKS · 2 GPU nodes · NVLink</div>
+        </div>
+        <div class="week-col"><div class="bar bar-infra">Cluster + GPU nodes + AWQ quant</div></div>
+        <div class="week-col"><div class="bar bar-infra">vLLM health checks × 3</div></div>
+        <div class="week-col"><div class="bar bar-empty"></div></div>
+        <div class="week-col"><div class="bar bar-empty"></div></div>
+      </div>
+      <div class="gantt-row">
+        <div>
+          <div class="task-label">Platform Integration</div>
+          <div class="task-sublabel">cai-eval-platform + Phoenix</div>
+        </div>
+        <div class="week-col"><div class="bar bar-empty"></div></div>
+        <div class="week-col"><div class="bar bar-eval">Backend wiring × 3 endpoints</div></div>
+        <div class="week-col"><div class="bar bar-eval">Phoenix tracing · Ragas</div></div>
+        <div class="week-col"><div class="bar bar-empty"></div></div>
+      </div>
+      <div class="gantt-row">
+        <div>
+          <div class="task-label">Benchmark Runs</div>
+          <div class="task-sublabel">tau-bench 635 tasks × 3</div>
+        </div>
+        <div class="week-col"><div class="bar bar-empty"></div></div>
+        <div class="week-col"><div class="bar bar-bench">Pilot 100 tasks</div></div>
+        <div class="week-col"><div class="bar bar-bench">Full 635 × 3 runs</div></div>
+        <div class="week-col"><div class="bar bar-empty"></div></div>
+      </div>
+      <div class="gantt-row">
+        <div>
+          <div class="task-label">Analysis &amp; Reporting</div>
+          <div class="task-sublabel">Ragas · latency · cost/task</div>
+        </div>
+        <div class="week-col"><div class="bar bar-empty"></div></div>
+        <div class="week-col"><div class="bar bar-empty"></div></div>
+        <div class="week-col"><div class="bar bar-bench">Scoring + profiling</div></div>
+        <div class="week-col"><div class="bar bar-demo">Report + demo</div></div>
+      </div>
+      <div class="gantt-row">
+        <div>
+          <div class="task-label">GPU pricing mode</div>
+          <div class="task-sublabel">Cost optimisation</div>
+        </div>
+        <div class="week-col" style="text-align:center; font-size:12px; color:var(--yellow);">Spot</div>
+        <div class="week-col" style="text-align:center; font-size:12px; color:var(--yellow);">Spot</div>
+        <div class="week-col" style="text-align:center; font-size:12px; color:var(--yellow);">Spot</div>
+        <div class="week-col" style="text-align:center; font-size:12px; color:var(--green);">On-demand</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <strong>Pricing note:</strong> Azure East US, pay-as-you-go Linux, ~2026 estimates. Spot ~40% discount (ND series; varies — check
+    <a href="https://azure.microsoft.com/en-us/pricing/spot-advisor/" target="_blank">Spot Advisor</a>).
+    Verify at the <a href="https://azure.microsoft.com/en-us/pricing/calculator/" target="_blank">Azure Pricing Calculator</a>.
+    GLM-5.2 AWQ INT4 quantization reduces model quality vs BF16 — acceptable for POC; evaluate quality delta in W2 pilot.
+    <br>
+    References:
+    <a href="https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series" target="_blank">ND A100 v4</a> ·
+    <a href="https://learn.microsoft.com/en-us/azure/virtual-machines/nd-h100-v5-series" target="_blank">ND H100 v5</a> ·
+    <a href="https://huggingface.co/zai-org/GLM-5.2" target="_blank">zai-org/GLM-5.2</a> ·
+    <a href="https://huggingface.co/Qwen/Qwen3.6-35B-A3B" target="_blank">Qwen/Qwen3.6-35B-A3B</a> ·
+    <a href="https://huggingface.co/google/gemma-4-31B-it" target="_blank">google/gemma-4-31B-it</a> ·
+    <a href="https://docs.vllm.ai" target="_blank">vLLM docs</a>
+  </div>
+
+</div>
+
+<script>
+// Cost bar chart — 2-node scenarios
+const costCtx = document.getElementById('costChart').getContext('2d');
+new Chart(costCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Full On-demand', 'Hybrid\n(recommended)', 'Full Spot', 'GLM-5.2 FP8\n(2× H100 nodes)'],
+    datasets: [
+      {
+        label: 'Node A — A100',
+        data: [19584, 14270, 11736, 19584],
+        backgroundColor: 'rgba(108,143,245,0.55)',
+        borderColor: 'rgba(108,143,245,0.9)',
+        borderWidth: 1, borderRadius: 4,
+      },
+      {
+        label: 'Node B — H100',
+        data: [23594, 15965, 14184, 23594],
+        backgroundColor: 'rgba(245,158,11,0.5)',
+        borderColor: 'rgba(245,158,11,0.9)',
+        borderWidth: 1, borderRadius: 4,
+      },
+      {
+        label: 'Node C — H100 (FP8 only)',
+        data: [0, 0, 0, 23594],
+        backgroundColor: 'rgba(248,113,113,0.4)',
+        borderColor: 'rgba(248,113,113,0.8)',
+        borderWidth: 1, borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#7c85a2', font: { size: 10 }, boxWidth: 10 } },
+      tooltip: {
+        callbacks: { label: ctx => ' ' + ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString() }
+      }
+    },
+    scales: {
+      x: { stacked: true, ticks: { color: '#7c85a2', font: { size: 10 } }, grid: { color: 'rgba(45,49,80,0.5)' } },
+      y: {
+        stacked: true,
+        ticks: { color: '#7c85a2', font: { size: 10 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' },
+        grid: { color: 'rgba(45,49,80,0.5)' }, beginAtZero: true,
+      }
+    }
+  }
+});
+
+// VRAM donut — across both nodes
+const vramCtx = document.getElementById('vramChart').getContext('2d');
+new Chart(vramCtx, {
+  type: 'doughnut',
+  data: {
+    labels: [
+      'Gemma 4 31B — Node A GPU 0–1 (160 GB)',
+      'Qwen3.6-35B — Node A GPU 2–3 (160 GB)',
+      'Node A spare GPU 4–7 (320 GB)',
+      'GLM-5.2 weights — Node B (376 GB INT4)',
+      'Node B KV cache headroom (264 GB)',
+    ],
+    datasets: [{
+      data: [160, 160, 320, 376, 264],
+      backgroundColor: [
+        'rgba(108,143,245,0.7)',
+        'rgba(167,139,250,0.7)',
+        'rgba(45,49,80,0.55)',
+        'rgba(245,158,11,0.75)',
+        'rgba(245,158,11,0.25)',
+      ],
+      borderColor: 'rgba(26,29,39,0.8)',
+      borderWidth: 2,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '58%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { color: '#7c85a2', font: { size: 10 }, boxWidth: 10, padding: 8 }
+      },
+      tooltip: {
+        callbacks: { label: ctx => ' ' + ctx.parsed + ' GB' }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>

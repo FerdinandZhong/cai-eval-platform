@@ -3,8 +3,13 @@
 import os
 import threading
 
-_initialized = False
-_lock = threading.Lock()
+# One-time OpenAI auto-instrumentation
+_setup_done = False
+_setup_lock = threading.Lock()
+
+# Per-project TracerProvider cache
+_project_providers: dict = {}
+_provider_lock = threading.Lock()
 
 
 def phoenix_base_url() -> str:
@@ -20,52 +25,73 @@ def phoenix_base_url() -> str:
     return f"http://127.0.0.1:{port}"
 
 
+def _otlp_endpoint() -> str:
+    return (
+        os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
+        or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+        or f"{phoenix_base_url()}/v1/traces"
+    )
+
+
 def setup_tracing() -> None:
-    global _initialized
-    with _lock:
-        if _initialized:
+    """Install OpenAI auto-instrumentation once.
+
+    Phoenix project registration is done lazily per project in
+    _get_project_tracer(), so this function no longer calls register().
+    """
+    global _setup_done
+    with _setup_lock:
+        if _setup_done:
             return
-
-        # An explicit OTLP/collector endpoint wins; otherwise derive it from
-        # the Phoenix base URL.
-        endpoint = (
-            os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
-            or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
-            or f"{phoenix_base_url()}/v1/traces"
-        )
-        try:
-            from phoenix.otel import register
-
-            # Do NOT set project_name here — it would become a resource attribute
-            # that Phoenix uses to route ALL spans to one project, overriding
-            # the per-span "openinference.project.name" attribute we set in
-            # eval_example_span().  Omitting it lets Phoenix respect the span
-            # attribute and route each eval run to its own project.
-            register(endpoint=endpoint)
-        except Exception as e:
-            print(f"[tracing] Phoenix OTEL register failed: {e}", flush=True)
-
         try:
             from openinference.instrumentation.openai import OpenAIInstrumentor
 
             OpenAIInstrumentor().instrument()
         except Exception as e:
             print(f"[tracing] OpenAI instrumentor failed: {e}", flush=True)
+        _setup_done = True
 
-        _initialized = True
+
+def _get_project_tracer(project_name: str):
+    """Return a tracer backed by a TracerProvider whose Resource carries
+    openinference.project.name = project_name.
+
+    Phoenix routes spans to a project via the TracerProvider's Resource
+    attribute, not span-level attributes.  Each unique project name gets its
+    own provider (created on first use, then cached).
+    """
+    with _provider_lock:
+        if project_name not in _project_providers:
+            try:
+                from phoenix.otel import register
+
+                provider = register(
+                    endpoint=_otlp_endpoint(),
+                    project_name=project_name,
+                    set_global_tracer_provider=False,
+                )
+                _project_providers[project_name] = provider
+            except Exception as e:
+                print(
+                    f"[tracing] Phoenix register failed for project '{project_name}': {e}",
+                    flush=True,
+                )
+                # Fall back to the global tracer provider so spans still emit
+                from opentelemetry import trace
+
+                return trace.get_tracer("cai-eval-platform")
+        provider = _project_providers[project_name]
+    return provider.get_tracer("cai-eval-platform")
 
 
 def eval_example_span(job_id: str, example_id: str, dataset_id: str,
                       project_name: str = "cai-eval"):
     """Context manager for per-example eval span.
 
-    Phoenix routes spans to a project by the 'openinference.project.name'
-    attribute on the root span.  Pass dataset_id + model_name as the project
-    so each experiment run appears in its own Phoenix project.
+    Uses a TracerProvider whose Resource has openinference.project.name set,
+    which is what Phoenix uses to route spans to the correct project.
     """
-    from opentelemetry import trace
-
-    tracer = trace.get_tracer("cai-eval-platform")
+    tracer = _get_project_tracer(project_name)
     return tracer.start_as_current_span(
         "eval.example",
         attributes={
