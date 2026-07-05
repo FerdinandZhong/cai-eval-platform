@@ -1,0 +1,44 @@
+[
+  {
+    "example_id": "uc1_m02_critical",
+    "machine_id": "M02",
+    "alert_timestamp": "2025-06-24T14:30:00Z",
+    "health_score": "38.5",
+    "expected_output": "CRITICAL severity for M02. The Health Monitor identifies a Z-axis vibration RMS spike (~3.7 mm/s) with health_score 38.5 and a high anomaly score, and the RUL Prediction Tool returns rul_hours ~6.5 with risk_level CRITICAL (confidence ~0.9). Failure mode: spindle bearing failure. The Maintenance Planner writes work_order_M02.json with recommended_action=immediate spindle bearing replacement, an emergency downtime window scheduled now, and high priority, plus a 2-3 sentence fleet narrative flagging M02 as an urgent line-down risk."
+  },
+  {
+    "example_id": "uc1_m02_critical_early",
+    "machine_id": "M02",
+    "alert_timestamp": "2025-06-24T14:25:00Z",
+    "health_score": "42.0",
+    "expected_output": "CRITICAL (early-onset) severity for M02. Z-axis RMS is already climbing (~2.8 mm/s) with health_score ~42, and the RUL Prediction Tool returns rul_hours ~8 with risk_level CRITICAL. Failure mode: emerging spindle bearing degradation. The Maintenance Planner writes work_order_M02.json recommending a prompt bearing replacement with an emergency/near-term downtime window and high priority, and a fleet narrative noting M02 is deteriorating fast toward a bearing failure."
+  },
+  {
+    "example_id": "uc1_m03_high_edge",
+    "machine_id": "M03",
+    "alert_timestamp": "2025-06-24T11:45:00Z",
+    "health_score": "52.0",
+    "expected_output": "HIGH severity for M03. The Health Monitor detects edge_alert_flag=true with an anomaly-score spike and an X-axis RMS increase (~+1.2 mm/s) around 11:45; the RUL Prediction Tool returns rul_hours ~18 with risk_level HIGH. Failure mode: edge-detected anomaly on the X-axis. The Maintenance Planner writes work_order_M03.json recommending a stop-run and spindle inspection before the next cycle at high priority, with a fleet narrative noting M03 needs inspection this shift."
+  },
+  {
+    "example_id": "uc1_m01_medium_toolwear",
+    "machine_id": "M01",
+    "alert_timestamp": "2025-06-24T15:55:00Z",
+    "health_score": "58.0",
+    "expected_output": "MEDIUM severity for M01. The Health Monitor sees a gradual health decline (85 -> ~58 across the shift) driven by a slowly rising Z-axis, with no edge flag; the RUL Prediction Tool returns rul_hours ~42 with risk_level MEDIUM. Failure mode: progressive tool wear. The Maintenance Planner writes work_order_M01.json recommending a tool change at shift end with medium priority and a scheduled (non-emergency) downtime window, and a fleet narrative noting M01 is stable but due for a tool change."
+  },
+  {
+    "example_id": "uc1_m01_low_stable",
+    "machine_id": "M01",
+    "alert_timestamp": "2025-06-24T12:00:00Z",
+    "health_score": "72.0",
+    "expected_output": "LOW severity for M01. Mid-shift health is ~72 with only a mild gradual Z-axis trend and no anomaly or edge flag; the RUL Prediction Tool returns a long rul_hours (tens of hours) with risk_level LOW. No failure imminent. The Maintenance Planner recommends routine monitoring / continue operation with no immediate work order action, and a fleet narrative confirming M01 is within normal limits."
+  },
+  {
+    "example_id": "uc1_m02_low_baseline",
+    "machine_id": "M02",
+    "alert_timestamp": "2025-06-24T09:00:00Z",
+    "health_score": "92.0",
+    "expected_output": "LOW severity for M02 at baseline. Early-shift vibration is nominal across all axes with health_score ~92, no anomaly, and no edge flag; the RUL Prediction Tool returns a high rul_hours with risk_level LOW. No action required. The Maintenance Planner recommends continued normal operation with no work order, and a fleet narrative confirming M02 is healthy well before the later spindle-bearing event."
+  }
+]

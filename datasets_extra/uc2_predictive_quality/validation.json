@@ -1,0 +1,50 @@
+[
+  {
+    "example_id": "uc2_cnc01_high_welding",
+    "machine_id": "CNC-01",
+    "alert_timestamp": "2025-06-24T10:15:00Z",
+    "defect_rate": "0.21",
+    "risk_level": "HIGH",
+    "expected_output": "HIGH severity confirmed for CNC-01. Alert Triage calls the Quality Prediction Tool and confirms defect_rate ~0.22 / risk_level HIGH; it routes the investigation to sensor_readings and quality_events for the cnc process. The Root-Cause Investigator pivots sensor_readings for 10:00-10:15 and finds vibration_rms and temperature rising together, correlated with a WELD-001 defect_logged event -> worn welding tip. The Recommendation Agent writes work_order_CNC-01.json with defect_code=WELD-001, root_cause=worn welding tip, corrective_action=production stop + welding-tip change, high priority, plus a concise supervisor recommendation."
+  },
+  {
+    "example_id": "uc2_cnc01_high_welding_2",
+    "machine_id": "CNC-01",
+    "alert_timestamp": "2025-06-24T10:20:00Z",
+    "defect_rate": "0.19",
+    "risk_level": "HIGH",
+    "expected_output": "HIGH severity confirmed for CNC-01 (later in the welding-crisis window). The Quality Prediction Tool returns defect_rate ~0.19 / risk_level HIGH. Root-Cause Investigator again finds joint vibration + temperature drift correlated with WELD-001 defects -> worn welding tip. The Recommendation Agent writes work_order_CNC-01.json recommending a production stop and welding-tip change at high priority, with a supervisor recommendation to halt the line until the tip is replaced."
+  },
+  {
+    "example_id": "uc2_paint01_medium_humidity",
+    "machine_id": "PAINT-01",
+    "alert_timestamp": "2025-06-24T14:30:00Z",
+    "defect_rate": "0.10",
+    "risk_level": "MEDIUM",
+    "expected_output": "MEDIUM severity confirmed for PAINT-01. The Quality Prediction Tool returns defect_rate ~0.10 / risk_level MEDIUM for the paint_booth process. Root-Cause Investigator pivots sensor_readings and finds humidity drifting upward (from ~45% toward ~60%) across the afternoon shift, ahead of any logged defect -> humidity/HVAC drift. The Recommendation Agent writes work_order_PAINT-01.json with root_cause=paint-booth humidity drift, corrective_action=HVAC/dehumidifier adjustment before the next shift, medium priority, and a supervisor recommendation to correct booth conditions proactively."
+  },
+  {
+    "example_id": "uc2_bat01_investigate_thermal",
+    "machine_id": "BAT-01",
+    "alert_timestamp": "2025-06-24T09:30:00Z",
+    "defect_rate": "0.11",
+    "risk_level": "INVESTIGATE",
+    "expected_output": "INVESTIGATE severity confirmed for BAT-01. The Quality Prediction Tool returns defect_rate ~0.11 / risk_level INVESTIGATE (unstable/negative anomaly score) for the battery_assembly process. Root-Cause Investigator finds a short triangular temperature spike (~+3.5 C) around 09:30 with no logged defect -> possible battery thermal / cooling-cycle anomaly. The Recommendation Agent writes work_order_BAT-01.json with root_cause=battery thermal anomaly, corrective_action=cooling-system inspection plus charge-cycle correlation, investigate/medium priority, and a supervisor recommendation to inspect rather than stop the line."
+  },
+  {
+    "example_id": "uc2_cnc01_low_stable",
+    "machine_id": "CNC-01",
+    "alert_timestamp": "2025-06-24T08:00:00Z",
+    "defect_rate": "0.03",
+    "risk_level": "LOW",
+    "expected_output": "LOW severity for CNC-01 at start of shift. The Quality Prediction Tool confirms a low defect_rate (~0.03) / risk_level LOW; sensor_readings show nominal vibration, temperature, and sound with no defect events in quality_events. No corrective action required. The Recommendation Agent recommends continued normal production / routine monitoring with no work order, and a supervisor note that CNC-01 is operating within quality limits."
+  },
+  {
+    "example_id": "uc2_paint01_low_stable",
+    "machine_id": "PAINT-01",
+    "alert_timestamp": "2025-06-24T09:00:00Z",
+    "defect_rate": "0.03",
+    "risk_level": "LOW",
+    "expected_output": "LOW severity for PAINT-01 in the morning shift. The Quality Prediction Tool confirms a low defect_rate (~0.03) / risk_level LOW; humidity is still at baseline (~45%) with no logged defects. No corrective action required. The Recommendation Agent recommends continued normal operation / routine monitoring with no work order, and a supervisor note that PAINT-01 booth conditions are stable before the afternoon humidity drift."
+  }
+]

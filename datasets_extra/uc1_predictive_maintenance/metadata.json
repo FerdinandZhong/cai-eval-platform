@@ -1,0 +1,13 @@
+{
+  "id": "uc1_predictive_maintenance",
+  "name": "UC1 Predictive Maintenance (CNC)",
+  "description": "Agent Studio workflow eval for the two-agent predictive maintenance pipeline (Health Monitor -> Maintenance Planner). Inputs map to the workflow variables machine_id, alert_timestamp, health_score; expected_output describes the final work-order JSON + fleet narrative. Grounded in the seeded iot_uc1_db data (2025-06-24 08:00-16:00 UTC). Live workflow: https://workflow-f6576176-8a34-4c8f-b947-3a84d0875b29.ml-a57ebe22-13d.qzhong-1.a465-9q4k.cloudera.site",
+  "size": 6,
+  "task_type": "agent",
+  "input_fields": ["machine_id", "alert_timestamp", "health_score"],
+  "reference_fields": ["expected_output"],
+  "requires_execution": false,
+  "default_metrics": ["agent_goal_accuracy"],
+  "workflow_url": "https://workflow-f6576176-8a34-4c8f-b947-3a84d0875b29.ml-a57ebe22-13d.qzhong-1.a465-9q4k.cloudera.site",
+  "custom": true
+}

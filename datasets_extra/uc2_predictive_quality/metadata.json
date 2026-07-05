@@ -1,0 +1,13 @@
+{
+  "id": "uc2_predictive_quality",
+  "name": "UC2 Predictive Quality (Bike Mfg)",
+  "description": "Agent Studio workflow eval for the three-agent predictive quality pipeline (Alert Triage -> Root-Cause Investigator -> Recommendation). Inputs map to the workflow variables machine_id, alert_timestamp, defect_rate, risk_level; expected_output describes the final corrective action + MES work-order JSON. Grounded in the seeded iot_uc2_db data (2025-06-24 06:00-18:00 UTC). Live workflow: https://workflow-e08b0937-1d3e-4509-8fad-f69c509208c8.ml-a57ebe22-13d.qzhong-1.a465-9q4k.cloudera.site",
+  "size": 6,
+  "task_type": "agent",
+  "input_fields": ["machine_id", "alert_timestamp", "defect_rate", "risk_level"],
+  "reference_fields": ["expected_output"],
+  "requires_execution": false,
+  "default_metrics": ["agent_goal_accuracy"],
+  "workflow_url": "https://workflow-e08b0937-1d3e-4509-8fad-f69c509208c8.ml-a57ebe22-13d.qzhong-1.a465-9q4k.cloudera.site",
+  "custom": true
+}

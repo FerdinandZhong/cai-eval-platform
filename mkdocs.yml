@@ -9,26 +9,32 @@ repo_url: https://github.com/FerdinandZhong/cai-eval-platform
 
 theme:
   name: material
+  logo: assets/images/logo-cloudera-white.svg
+  favicon: assets/images/favicon.ico
   palette:
     - scheme: default
-      primary: deep purple
-      accent: deep purple
+      primary: custom
+      accent: custom
       toggle:
-        icon: material/brightness-7
+        icon: material/weather-night
         name: Switch to dark mode
     - scheme: slate
-      primary: deep purple
-      accent: deep purple
+      primary: custom
+      accent: custom
       toggle:
-        icon: material/brightness-4
+        icon: material/weather-sunny
         name: Switch to light mode
   features:
     - navigation.tabs
     - navigation.top
     - navigation.sections
+    - navigation.footer
     - search.suggest
     - search.highlight
     - content.code.copy
+
+extra_css:
+  - assets/stylesheets/extra.css
 
 markdown_extensions:
   - admonition
