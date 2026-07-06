@@ -75,27 +75,53 @@ def score_agent_goal_with_reference(
 ) -> tuple[float, dict]:
     from ragas.metrics.collections import AgentGoalAccuracyWithReference
 
-    async def _run():
+    # #region agent log
+    # Inline ragas' two-step ascore so we can capture the intermediate values it
+    # normally discards: the inferred user_goal / end_state and the comparison
+    # reason + verdict. This reveals WHY a run scores 0.0 with no error.
+    async def _run_detailed():
+        from ragas.metrics.collections.agent_goal_accuracy.util import (
+            CompareOutcomeInput,
+            CompareOutcomeOutput,
+        )
         llm = _get_judge_llm(config)
         metric = AgentGoalAccuracyWithReference(llm=llm)
-        result = await metric.ascore(user_input=user_input, reference=reference)
-        return float(result.value)
+        conversation = metric._format_conversation(user_input)
+        workflow_result = await metric._infer_goal_outcome(conversation)
+        cmp_input = CompareOutcomeInput(
+            desired_outcome=reference, arrived_outcome=workflow_result.end_state
+        )
+        prompt_str = metric.compare_outcome_prompt.to_string(cmp_input)
+        cmp = await metric.llm.agenerate(prompt_str, CompareOutcomeOutput)
+        return (
+            float(int(cmp.verdict)),
+            workflow_result.user_goal,
+            workflow_result.end_state,
+            cmp.reason,
+        )
+    # #endregion
 
     trace = {"metric": "agent_goal_accuracy_with_reference", "reference": reference}
     # #region agent log
     _summary = _dbg_summarize_user_input(user_input)
     trace["debug_judge_input"] = _summary
-    trace["debug_code_version"] = "judge-maxtokens4096-v3"
-    _dbg_log({
-        "runId": "post-fix",
-        "hypothesisId": "H4_max_tokens",
-        "location": "ragas_agent.py:score_agent_goal_with_reference",
-        "message": "judge input actually received",
-        "data": _summary,
-    })
+    trace["debug_code_version"] = "judge-detailed-v4"
     # #endregion
     try:
-        val = asyncio.run(_run())
+        # #region agent log
+        val, _goal, _end, _reason = asyncio.run(_run_detailed())
+        trace["debug_user_goal"] = _goal
+        trace["debug_end_state"] = _end
+        trace["debug_compare_reason"] = _reason
+        trace["debug_verdict"] = val
+        _dbg_log({
+            "runId": "diag-verdict",
+            "hypothesisId": "H8_strict_compare",
+            "location": "ragas_agent.py:score_agent_goal_with_reference",
+            "message": "judge intermediate values",
+            "data": {"verdict": val, "user_goal": _goal, "end_state": _end, "reason": _reason},
+        })
+        # #endregion
         return val, trace
     except Exception as e:
         trace["error"] = str(e)
