@@ -216,9 +216,22 @@ def _score_result(result: dict, record: dict, job: EvaluationJob, meta: dict) ->
     pred = result.get("output_text") or result.get("pred_sql", "")
     result["scores"] = result.get("scores") or {}
 
-    user_input = events_to_user_input(
+    # Events → tracing only. For goal-accuracy the judge compares the final
+    # output against the reference; passing the full multi-turn trace (with
+    # repeated system prompts, intermediate SQL, tool observations) bloats the
+    # context and injects noise. Build a minimal 2-message conversation instead:
+    # the initial question (if any) + the crew's final answer.
+    from ragas.messages import AIMessage as _AI, HumanMessage as _HM
+    _q = record.get("question") or ""
+    final_user_input = (
+        [_HM(content=_q), _AI(content=pred)] if _q else [_AI(content=pred)]
+    )
+
+    # Tool-call metrics still need the full trajectory to check which tools
+    # were actually invoked.
+    event_trajectory = events_to_user_input(
         result.get("events", []),
-        initial_question=record.get("question", ""),
+        initial_question=_q,
     )
     ref_tools = extract_reference_tool_calls(record)
 
@@ -237,15 +250,15 @@ def _score_result(result: dict, record: dict, job: EvaluationJob, meta: dict) ->
             result["scores"][metric_name] = score_val
             result.setdefault("judge_traces", {})[metric_name] = judge_trace
         elif metric_name == "agent_goal_accuracy":
-            score_val, trace = score_agent_goal_with_reference(user_input, reference, cfg)
+            score_val, trace = score_agent_goal_with_reference(final_user_input, reference, cfg)
             result["scores"][metric_name] = score_val
             result.setdefault("judge_traces", {})[metric_name] = trace
         elif metric_name == "tool_call_accuracy" and ref_tools:
-            score_val, trace = score_tool_call_accuracy(user_input, ref_tools, config=cfg)
+            score_val, trace = score_tool_call_accuracy(event_trajectory, ref_tools, config=cfg)
             result["scores"][metric_name] = score_val
             result.setdefault("judge_traces", {})[metric_name] = trace
         elif metric_name == "tool_call_f1" and ref_tools:
-            score_val, trace = score_tool_call_f1(user_input, ref_tools, config=cfg)
+            score_val, trace = score_tool_call_f1(event_trajectory, ref_tools, config=cfg)
             result["scores"][metric_name] = score_val
             result.setdefault("judge_traces", {})[metric_name] = trace
         else:
