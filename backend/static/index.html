@@ -1164,7 +1164,14 @@ async function discoverWorkflow() {
       el.textContent = `Inputs: ${(d.input_fields || []).join(', ') || 'none'} · conversational: ${d.is_conversational}`;
       if (d.input_fields && d.input_fields.length) {
         const mapping = {};
-        d.input_fields.forEach(f => { mapping['question'] = f; });
+        if (d.is_conversational) {
+          // Conversational workflow: map the dataset's question column to the chat input.
+          mapping['question'] = d.input_fields[0] || 'user_input';
+        } else {
+          // Structured workflow: default to identity so dataset columns of the
+          // same name pass through to each workflow input (edit to remap).
+          d.input_fields.forEach(f => { mapping[f] = f; });
+        }
         document.getElementById('input-mapping').value = JSON.stringify(mapping, null, 2);
       }
     } else {
