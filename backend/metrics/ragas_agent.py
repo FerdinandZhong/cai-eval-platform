@@ -25,6 +25,45 @@ def _get_judge_llm(config: Optional[dict] = None):
     return llm_factory(model, client=client)
 
 
+# #region agent log
+def _dbg_summarize_user_input(user_input):
+    """Runtime summary of exactly what is handed to the goal-accuracy judge."""
+    try:
+        msgs = user_input or []
+        roles, joined, total = [], [], 0
+        for m in msgs:
+            role = type(m).__name__
+            content = getattr(m, "content", "") or ""
+            roles.append(role)
+            total += len(content)
+            joined.append(f"{role}: {content}")
+        blob = "\n".join(joined)
+        markers = ["Action Input", "Observation:", "execute_query", "tool_output", "Thought:", "get_schema"]
+        return {
+            "msg_count": len(msgs),
+            "roles": roles,
+            "total_chars": total,
+            "contains_event_markers": any(mk in blob for mk in markers),
+            "preview": blob[:800],
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"summarize_error": str(e)}
+
+
+def _dbg_log(payload):
+    try:
+        import json as _json
+        import time as _t
+        with open(
+            "/Users/zhongqishuai/Projects/cldr_projects/cai-eval-platform/.cursor/debug-a2e409.log",
+            "a",
+        ) as _f:
+            _f.write(_json.dumps({"sessionId": "a2e409", "timestamp": int(_t.time() * 1000), **payload}) + "\n")
+    except Exception:
+        pass
+# #endregion
+
+
 def score_agent_goal_with_reference(
     user_input: list,
     reference: str,
@@ -39,6 +78,18 @@ def score_agent_goal_with_reference(
         return float(result.value)
 
     trace = {"metric": "agent_goal_accuracy_with_reference", "reference": reference}
+    # #region agent log
+    _summary = _dbg_summarize_user_input(user_input)
+    trace["debug_judge_input"] = _summary
+    trace["debug_code_version"] = "judge-input-v2-final-output-only"
+    _dbg_log({
+        "runId": "initial",
+        "hypothesisId": "H1_H2_H3",
+        "location": "ragas_agent.py:score_agent_goal_with_reference",
+        "message": "judge input actually received",
+        "data": _summary,
+    })
+    # #endregion
     try:
         val = asyncio.run(_run())
         return val, trace

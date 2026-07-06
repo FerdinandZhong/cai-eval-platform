@@ -258,6 +258,33 @@ def _score_result(result: dict, record: dict, job: EvaluationJob, meta: dict) ->
             result["scores"][metric_name] = score_val
             result.setdefault("judge_traces", {})[metric_name] = judge_trace
         elif metric_name == "agent_goal_accuracy":
+            # #region agent log
+            try:
+                import json as _dbgjson
+                import time as _dbgtime
+                with open(
+                    "/Users/zhongqishuai/Projects/cldr_projects/cai-eval-platform/.cursor/debug-a2e409.log",
+                    "a",
+                ) as _dbgf:
+                    _dbgf.write(_dbgjson.dumps({
+                        "sessionId": "a2e409",
+                        "runId": "initial",
+                        "hypothesisId": "H1_evaluator_path",
+                        "location": "evaluator.py:_score_result",
+                        "message": "final_user_input built for judge",
+                        "data": {
+                            "evaluator_version": "final-output-only-v2",
+                            "msg_count": len(final_user_input),
+                            "question_present": bool(_q),
+                            "question_preview": (_q or "")[:200],
+                            "pred_chars": len(pred or ""),
+                            "events_count": len(result.get("events", [])),
+                        },
+                        "timestamp": int(_dbgtime.time() * 1000),
+                    }) + "\n")
+            except Exception:
+                pass
+            # #endregion
             score_val, trace = score_agent_goal_with_reference(final_user_input, reference, cfg)
             result["scores"][metric_name] = score_val
             result.setdefault("judge_traces", {})[metric_name] = trace
