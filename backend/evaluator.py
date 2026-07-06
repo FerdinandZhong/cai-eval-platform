@@ -30,7 +30,7 @@ from targets.base import EvalContext
 from targets.llm_endpoint import LLMEndpointConfig, LLMEndpointTarget, extract_sql
 from trace.event_to_ragas import events_to_user_input, extract_reference_tool_calls
 from trace.workflow_events_to_spans import export_workflow_trace
-from tracing import eval_example_span, setup_tracing
+from tracing import eval_example_span, get_project_tracer, setup_tracing
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
 BUNDLED_DATASETS_DIR = Path(os.environ.get("DATASETS_DIR", "/app/datasets"))
@@ -318,6 +318,7 @@ def _evaluate_example(
                     job.id,
                     example_id,
                     tr.output_text,
+                    tracer_override=get_project_tracer(project_name),
                 )
                 result["span_id"] = span_id
 

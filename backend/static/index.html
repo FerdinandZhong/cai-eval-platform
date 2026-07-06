@@ -642,6 +642,11 @@ footer {
         <textarea id="input-mapping" rows="3" style="font-family:monospace;font-size:12px" placeholder='{"question": "question"}'></textarea>
         <div class="input-hint">Map dataset columns to workflow input field names</div>
       </div>
+      <div class="form-group">
+        <label for="workflow-timeout">Per-example Timeout (seconds)</label>
+        <input type="number" id="workflow-timeout" value="900" min="30" step="30">
+        <div class="input-hint">Max time to wait for one workflow run to reach a terminal event before giving up</div>
+      </div>
     </div>
 
     <div id="panel-local" class="target-panel">
@@ -1232,7 +1237,9 @@ async function startEvaluation() {
     metrics: metrics.length ? metrics : ['agent_goal_accuracy'],
     max_samples: parseInt(document.getElementById('max-samples').value) || 0,
     concurrency: targetType === 'agent_studio' ? 1 : (parseInt(document.getElementById('concurrency').value) || 4),
-    timeout: targetType === 'agent_studio' ? 300 : 60,
+    timeout: targetType === 'agent_studio'
+      ? (parseInt(document.getElementById('workflow-timeout').value) || 900)
+      : 60,
     temperature: 0.0,
     metric_config,
     input_mapping,
@@ -1306,11 +1313,35 @@ async function uploadDataset() {
     showNotice('upload-notice', 'error', 'JSON must be an array of records.', true); return;
   }
 
+  // Infer the dataset schema from the record keys so multi-input workflows
+  // (e.g. machine_id, alert_timestamp, health_score) are not collapsed into a
+  // single "question" input by the backend default.
+  const REFERENCE_OR_META = new Set([
+    'expected_output', 'reference', 'query', 'gold_sql', 'answer', 'sql',
+    'reference_tool_calls', 'expected_tool_calls', 'example_id', 'id', 'db_id', 'schema',
+  ]);
+  const first = (records[0] && typeof records[0] === 'object') ? records[0] : {};
+  const keys = Object.keys(first);
+  let input_fields = keys.filter(k => !REFERENCE_OR_META.has(k));
+  if (!input_fields.length) input_fields = ['question'];
+  const reference_fields = ['expected_output', 'reference', 'query'].filter(k => k in first);
+  const task_type = ('expected_output' in first)
+    ? 'agent'
+    : (('query' in first || 'gold_sql' in first) ? 'text2sql' : 'general');
+
   try {
     const r = await fetch('api/datasets/upload-file', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc, system_prompt: document.getElementById('upload-sys-prompt').value.trim(), records }),
+      body: JSON.stringify({
+        name,
+        description: desc,
+        system_prompt: document.getElementById('upload-sys-prompt').value.trim(),
+        task_type,
+        input_fields,
+        reference_fields: reference_fields.length ? reference_fields : undefined,
+        records,
+      }),
     });
     const d = await r.json();
     if (r.ok) {

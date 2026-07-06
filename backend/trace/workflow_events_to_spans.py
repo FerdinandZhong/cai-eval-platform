@@ -44,6 +44,7 @@ def export_workflow_trace(
     job_id: str,
     example_id: str,
     output_text: str = "",
+    tracer_override=None,
 ) -> Optional[str]:
     """Export workflow events as OTEL spans with original event timestamps.
 
@@ -52,10 +53,17 @@ def export_workflow_trace(
     shows the entire trace collapsed to <1 ms because Python processes all
     events nearly simultaneously.
 
+    ``tracer_override`` must be the per-project tracer (see
+    tracing.get_project_tracer); otherwise the spans go to the global provider
+    which has no Phoenix exporter and the workflow stages never appear under the
+    enclosing eval.example span.
+
     Returns root span_id hex if exported, else None.
     """
     if not events:
         return None
+
+    span_tracer = tracer_override or tracer
 
     now_ns = time.time_ns()
     timestamps = [_ts_to_ns(e.get("timestamp")) for e in events]
@@ -66,7 +74,7 @@ def export_workflow_trace(
     if last_ts <= first_ts:
         last_ts = first_ts + 1_000_000  # ensure ≥1 ms root duration
 
-    root_span = tracer.start_span(
+    root_span = span_tracer.start_span(
         "workflow.kickoff",
         kind=SpanKind.SERVER,
         start_time=first_ts,
@@ -92,7 +100,7 @@ def export_workflow_trace(
             else:
                 evt_end = last_ts if last_ts > evt_start else evt_start + 1_000_000
 
-            child = tracer.start_span(
+            child = span_tracer.start_span(
                 name,
                 kind=kind,
                 start_time=evt_start,
