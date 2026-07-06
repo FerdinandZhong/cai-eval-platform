@@ -7,7 +7,7 @@
   "input_fields": ["machine_id", "alert_timestamp", "defect_rate", "risk_level"],
   "reference_fields": ["expected_output"],
   "requires_execution": false,
-  "default_metrics": ["agent_goal_accuracy"],
+  "default_metrics": ["agent_goal_accuracy", "work_order_match"],
   "workflow_url": "https://workflow-e08b0937-1d3e-4509-8fad-f69c509208c8.ml-a57ebe22-13d.qzhong-1.a465-9q4k.cloudera.site",
   "custom": true
 }
