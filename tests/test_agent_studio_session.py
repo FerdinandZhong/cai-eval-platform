@@ -104,3 +104,40 @@ def test_no_shared_session_state_between_invocations():
         f"_session_id should remain None (was: {target._session_id!r}); "
         "sessions must not be shared across invocations"
     )
+
+
+def test_events_endpoint_is_delta_not_cumulative():
+    """The events API returns only NEW events per poll. All returned events must
+    be captured and the terminal event detected even when it arrives in a later
+    poll as a single-event delta (regression: cumulative len() check dropped it)."""
+    cfg = AgentStudioConfig(workflow_url="http://fake-studio", poll_interval_sec=0.01)
+    target = AgentStudioWorkflowTarget(cfg)
+
+    # Each call returns ONLY the new events since the previous call.
+    deltas = [
+        [{"type": "task_started", "task_name": "t1"},
+         {"type": "tool_usage_finished", "tool_name": "iceberg"}],
+        [{"type": "llm_call_completed", "model": "gpt", "response": "r"}],
+        [{"type": "agent_execution_completed", "agent_name": "a1"}],
+        [{"type": "crew_kickoff_completed", "output": "done"}],
+    ]
+    calls = {"n": 0}
+
+    def fake_get_events(trace_id):
+        i = calls["n"]
+        calls["n"] += 1
+        return deltas[i] if i < len(deltas) else []
+
+    target.client.get_events = fake_get_events
+
+    events, terminal = target._poll_until_terminal("trace-1", timeout=5)
+
+    assert terminal is not None and terminal["type"] == "crew_kickoff_completed"
+    types = [e["type"] for e in events]
+    assert types == [
+        "task_started",
+        "tool_usage_finished",
+        "llm_call_completed",
+        "agent_execution_completed",
+        "crew_kickoff_completed",
+    ], f"middle-stage events dropped: {types}"

@@ -84,6 +84,15 @@ def _get_project_tracer(project_name: str):
     return provider.get_tracer("cai-eval-platform")
 
 
+def get_project_tracer(project_name: str = "cai-eval"):
+    """Public accessor for the per-project tracer.
+
+    Workflow span export must use this (not the global tracer) so the spans land
+    in the same Phoenix project and trace as the enclosing eval.example span.
+    """
+    return _get_project_tracer(project_name)
+
+
 def eval_example_span(job_id: str, example_id: str, dataset_id: str,
                       project_name: str = "cai-eval"):
     """Context manager for per-example eval span.

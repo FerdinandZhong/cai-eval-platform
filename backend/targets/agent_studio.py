@@ -11,7 +11,11 @@ from typing import Optional
 from targets.base import EvalContext, TargetResult, TargetSchema
 
 TERMINAL_EVENTS = {"crew_kickoff_completed", "crew_kickoff_failed"}
-POLL_INTERVAL_SEC = 5
+POLL_INTERVAL_SEC = 2
+# Start responsive so short runs return quickly, then back off to the cap so
+# long runs don't hammer the events endpoint.
+INITIAL_POLL_INTERVAL_SEC = 0.75
+POLL_BACKOFF_FACTOR = 1.6
 
 
 @dataclass
@@ -156,19 +160,26 @@ class AgentStudioWorkflowTarget:
     def _poll_until_terminal(self, trace_id: str, timeout: int) -> tuple[list, Optional[dict]]:
         deadline = time.time() + timeout
         all_events: list = []
-        seen = 0
+        max_interval = max(0.1, self.config.poll_interval_sec)
+        interval = min(INITIAL_POLL_INTERVAL_SEC, max_interval)
 
         while time.time() < deadline:
+            # The events endpoint returns only NEW (delta) events per call, so
+            # every returned event is appended — do NOT treat it as a cumulative
+            # snapshot, or all events after the first poll (including the
+            # terminal one) get dropped and the run waits out the full timeout.
             batch = self.client.get_events(trace_id)
-            if len(batch) > seen:
-                all_events.extend(batch[seen:])
-                seen = len(batch)
+            if batch:
+                all_events.extend(batch)
+                for event in batch:
+                    if event.get("type") in TERMINAL_EVENTS:
+                        return all_events, event
 
-            for event in reversed(all_events):
-                if event.get("type") in TERMINAL_EVENTS:
-                    return all_events, event
-
-            time.sleep(self.config.poll_interval_sec)
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            time.sleep(min(interval, remaining))
+            interval = min(max_interval, interval * POLL_BACKOFF_FACTOR)
 
         return all_events, None
 

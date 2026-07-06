@@ -642,6 +642,11 @@ footer {
         <textarea id="input-mapping" rows="3" style="font-family:monospace;font-size:12px" placeholder='{"question": "question"}'></textarea>
         <div class="input-hint">Map dataset columns to workflow input field names</div>
       </div>
+      <div class="form-group">
+        <label for="workflow-timeout">Per-example Timeout (seconds)</label>
+        <input type="number" id="workflow-timeout" value="900" min="30" step="30">
+        <div class="input-hint">Max time to wait for one workflow run to reach a terminal event before giving up</div>
+      </div>
     </div>
 
     <div id="panel-local" class="target-panel">
@@ -1232,7 +1237,9 @@ async function startEvaluation() {
     metrics: metrics.length ? metrics : ['agent_goal_accuracy'],
     max_samples: parseInt(document.getElementById('max-samples').value) || 0,
     concurrency: targetType === 'agent_studio' ? 1 : (parseInt(document.getElementById('concurrency').value) || 4),
-    timeout: targetType === 'agent_studio' ? 300 : 60,
+    timeout: targetType === 'agent_studio'
+      ? (parseInt(document.getElementById('workflow-timeout').value) || 900)
+      : 60,
     temperature: 0.0,
     metric_config,
     input_mapping,
