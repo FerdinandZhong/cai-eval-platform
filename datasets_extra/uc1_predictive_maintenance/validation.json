@@ -39,6 +39,6 @@
     "machine_id": "M02",
     "alert_timestamp": "2025-06-24T09:00:00Z",
     "health_score": "92.0",
-    "expected_output": "M02 is classified LOW and healthy at baseline, so no maintenance action is required and the recommendation is to continue normal operation."
+    "expected_output": "M02 is classified LOW and healthy at baseline, so no corrective maintenance is required and the recommendation is to continue normal operation with routine monitoring."
   }
 ]

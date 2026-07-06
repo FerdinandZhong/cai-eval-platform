@@ -109,14 +109,17 @@ register(
 register(
     "agent_outcome_judge",
     _aoj.score,
-    "Graded LLM judge for agent outcome match (severity + recommended action); "
-    "tolerant of wording, unlike the binary agent_goal_accuracy.",
+    "Graded LLM judge (1.0/0.5/0.0) for whether the workflow output matches the "
+    "reference outcome; tolerant of wording, unlike the binary agent_goal_accuracy. "
+    "Set 'dimensions' to judge workflow-specific aspects (e.g. severity; action).",
     "continuous",
     requires_config=True,
     config_fields=[
         {"name": "url", "label": "Judge LLM URL", "type": "url", "placeholder": "https://..."},
         {"name": "token", "label": "API Token", "type": "password", "placeholder": "sk-..."},
         {"name": "model", "label": "Model Name", "type": "text", "placeholder": "default"},
+        {"name": "dimensions", "label": "Dimensions (one per line, optional)", "type": "text",
+         "placeholder": "severity / classification\nrecommended action"},
     ],
     task_types=["agent", "general"],
 )
