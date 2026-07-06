@@ -1306,11 +1306,35 @@ async function uploadDataset() {
     showNotice('upload-notice', 'error', 'JSON must be an array of records.', true); return;
   }
 
+  // Infer the dataset schema from the record keys so multi-input workflows
+  // (e.g. machine_id, alert_timestamp, health_score) are not collapsed into a
+  // single "question" input by the backend default.
+  const REFERENCE_OR_META = new Set([
+    'expected_output', 'reference', 'query', 'gold_sql', 'answer', 'sql',
+    'reference_tool_calls', 'expected_tool_calls', 'example_id', 'id', 'db_id', 'schema',
+  ]);
+  const first = (records[0] && typeof records[0] === 'object') ? records[0] : {};
+  const keys = Object.keys(first);
+  let input_fields = keys.filter(k => !REFERENCE_OR_META.has(k));
+  if (!input_fields.length) input_fields = ['question'];
+  const reference_fields = ['expected_output', 'reference', 'query'].filter(k => k in first);
+  const task_type = ('expected_output' in first)
+    ? 'agent'
+    : (('query' in first || 'gold_sql' in first) ? 'text2sql' : 'general');
+
   try {
     const r = await fetch('api/datasets/upload-file', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc, system_prompt: document.getElementById('upload-sys-prompt').value.trim(), records }),
+      body: JSON.stringify({
+        name,
+        description: desc,
+        system_prompt: document.getElementById('upload-sys-prompt').value.trim(),
+        task_type,
+        input_fields,
+        reference_fields: reference_fields.length ? reference_fields : undefined,
+        records,
+      }),
     });
     const d = await r.json();
     if (r.ok) {
