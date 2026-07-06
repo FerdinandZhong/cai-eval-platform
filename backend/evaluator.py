@@ -220,12 +220,20 @@ def _score_result(result: dict, record: dict, job: EvaluationJob, meta: dict) ->
     # output against the reference; passing the full multi-turn trace (with
     # repeated system prompts, intermediate SQL, tool observations) bloats the
     # context and injects noise. Build a minimal 2-message conversation instead:
-    # the initial question (if any) + the crew's final answer.
+    # the initial question + the crew's final answer.
+    #
+    # When the dataset has a `question` field (conversational datasets), use it.
+    # When it doesn't (structured multi-input datasets like UC1/UC2), synthesise
+    # the question from the non-reference input fields so the judge has context.
     from ragas.messages import AIMessage as _AI, HumanMessage as _HM
     _q = record.get("question") or ""
-    final_user_input = (
-        [_HM(content=_q), _AI(content=pred)] if _q else [_AI(content=pred)]
-    )
+    if not _q:
+        ref_fields = set(get_reference_fields(meta))
+        skip = ref_fields | {"example_id", "id", "reference_tool_calls", "expected_tool_calls"}
+        parts = [f"{k}: {v}" for k, v in record.items() if k not in skip and v]
+        if parts:
+            _q = "Evaluate the following workflow inputs: " + ", ".join(parts)
+    final_user_input = [_HM(content=_q), _AI(content=pred)] if _q else [_AI(content=pred)]
 
     # Tool-call metrics still need the full trajectory to check which tools
     # were actually invoked.
