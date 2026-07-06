@@ -13,6 +13,10 @@ def _get_judge_llm(config: Optional[dict] = None):
     url = cfg.get("url", "").strip() or os.environ.get("JUDGE_LLM_URL", "")
     token = cfg.get("token", "").strip() or os.environ.get("JUDGE_LLM_TOKEN", "dummy")
     model = cfg.get("model", "").strip() or os.environ.get("JUDGE_LLM_MODEL", "default")
+    # ragas' instructor LLM defaults to max_tokens=1024, which truncates the
+    # structured goal-accuracy output and raises "output is incomplete due to a
+    # max_tokens length limit", scoring every example 0.0. Raise the ceiling.
+    max_tokens = int(cfg.get("max_tokens") or os.environ.get("JUDGE_LLM_MAX_TOKENS", 4096))
 
     if not url:
         raise ValueError("Ragas metrics require judge LLM url in metric_config or JUDGE_LLM_URL env")
@@ -22,7 +26,7 @@ def _get_judge_llm(config: Optional[dict] = None):
         base = f"{base}/v1"
 
     client = AsyncOpenAI(base_url=base, api_key=token)
-    return llm_factory(model, client=client)
+    return llm_factory(model, client=client, max_tokens=max_tokens)
 
 
 # #region agent log
@@ -81,10 +85,10 @@ def score_agent_goal_with_reference(
     # #region agent log
     _summary = _dbg_summarize_user_input(user_input)
     trace["debug_judge_input"] = _summary
-    trace["debug_code_version"] = "judge-input-v2-final-output-only"
+    trace["debug_code_version"] = "judge-maxtokens4096-v3"
     _dbg_log({
-        "runId": "initial",
-        "hypothesisId": "H1_H2_H3",
+        "runId": "post-fix",
+        "hypothesisId": "H4_max_tokens",
         "location": "ragas_agent.py:score_agent_goal_with_reference",
         "message": "judge input actually received",
         "data": _summary,
