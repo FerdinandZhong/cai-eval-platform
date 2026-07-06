@@ -11,7 +11,7 @@
     "machine_id": "M02",
     "alert_timestamp": "2025-06-24T14:25:00Z",
     "health_score": "42.0",
-    "expected_output": "M02 is classified CRITICAL for early-onset spindle bearing degradation, and the recommended maintenance action is a prompt spindle bearing replacement with urgent downtime. A maintenance work order for M02 is created."
+    "expected_output": "M02 is classified HIGH for a building spindle-bearing anomaly (anomaly-score spike, RUL still above 8h and health above 40), and the recommended maintenance action is a stop-run with spindle inspection before the next cycle. A maintenance work order for M02 is created."
   },
   {
     "example_id": "uc1_m03_high_edge",
