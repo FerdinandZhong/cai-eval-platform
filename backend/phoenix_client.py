@@ -161,15 +161,18 @@ def upload_evaluation_results(
             continue
 
         try:
+            # Keep the experiment run output human-reviewable: show only the
+            # workflow's final output. The full event trajectory is still used
+            # for tracing (exported as OTEL spans via export_workflow_trace and
+            # kept in the results file) and remains reachable through trace_id /
+            # span_id below — it is intentionally NOT embedded in the experiment
+            # span, where it drowns out the answer under review.
             run_output = {
                 "output": r.get("output_text") or r.get("pred_sql", ""),
-                "pred_sql": r.get("pred_sql", ""),
                 "trace_id": r.get("trace_id"),
                 "span_id": r.get("span_id"),
                 "workflow_phoenix_url": r.get("workflow_phoenix_url"),
             }
-            if r.get("events"):
-                run_output["events"] = r["events"]
             judge_traces = r.get("judge_traces", {})
             if judge_traces:
                 run_output["judge_traces"] = judge_traces

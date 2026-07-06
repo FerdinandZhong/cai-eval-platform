@@ -296,6 +296,11 @@ def _score_result(result: dict, record: dict, job: EvaluationJob, meta: dict) ->
             score_val, trace = score_tool_call_f1(event_trajectory, ref_tools, config=cfg)
             result["scores"][metric_name] = score_val
             result.setdefault("judge_traces", {})[metric_name] = trace
+        elif metric_name == "agent_outcome_judge":
+            from metrics.agent_outcome_judge import score_detailed as _aoj_detailed
+            score_val, judge_trace = _aoj_detailed(reference, pred, config=cfg or None)
+            result["scores"][metric_name] = score_val
+            result.setdefault("judge_traces", {})[metric_name] = judge_trace
         else:
             result["scores"][metric_name] = m["fn"](reference, pred, config=cfg if cfg else None)
 

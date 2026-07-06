@@ -72,6 +72,7 @@ def load_custom_metrics(data_dir: Path) -> None:
             pass
 
 
+from . import agent_outcome_judge as _aoj
 from . import component_match as _cm
 from . import exact_match as _em
 from . import execution_accuracy as _ea
@@ -104,6 +105,20 @@ register(
     "Fraction of SQL clauses with matching token sets.",
     "continuous",
     task_types=["text2sql"],
+)
+register(
+    "agent_outcome_judge",
+    _aoj.score,
+    "Graded LLM judge for agent outcome match (severity + recommended action); "
+    "tolerant of wording, unlike the binary agent_goal_accuracy.",
+    "continuous",
+    requires_config=True,
+    config_fields=[
+        {"name": "url", "label": "Judge LLM URL", "type": "url", "placeholder": "https://..."},
+        {"name": "token", "label": "API Token", "type": "password", "placeholder": "sk-..."},
+        {"name": "model", "label": "Model Name", "type": "text", "placeholder": "default"},
+    ],
+    task_types=["agent", "general"],
 )
 register(
     "llm_as_judge_sql",
