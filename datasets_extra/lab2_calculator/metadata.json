@@ -1,0 +1,12 @@
+{
+  "id": "lab2_calculator",
+  "name": "Lab 2 Calculator (NPV Workflow)",
+  "description": "Eval for the Lab 2 CalculateWithTools workflow. The agent computes NPV = FV / (1+discount/100)^years using the Calculator Tool (exponent + division calls). Each record has a pre-computed exact expected answer so correctness can be checked numerically with npv_exact_match (no judge LLM required). The canonical case (FV=5000, years=4.5, discount=6.5%) exactly matches the lab Step 7 reference output of $3,766.14.",
+  "size": 8,
+  "task_type": "agent",
+  "input_fields": ["FV", "years", "discount"],
+  "reference_fields": ["expected_output"],
+  "requires_execution": false,
+  "default_metrics": ["agent_goal_accuracy"],
+  "custom": true
+}
