@@ -1,0 +1,23 @@
+[
+  {
+    "example_id": "syn_d1_full_chain",
+    "target_tables": "source_customers,source_accounts,source_transactions",
+    "rows_per_table": "100",
+    "database": "your_database",
+    "expected_output": "The D1 pipeline profiles the schema for source_customers, source_accounts, and source_transactions, infers and SQL-validates the FK chain (customers -> accounts -> transactions), generates PII-free synthetic CSVs for all three tables, patches the child FK columns so there are zero orphan keys, and returns a quality scorecard with an overall PASS verdict and dataset_ready_for_training true (the wide source_transactions table may be PARTIAL on schema fidelity, which is acceptable)."
+  },
+  {
+    "example_id": "syn_d1_two_table",
+    "target_tables": "source_customers,source_accounts",
+    "rows_per_table": "100",
+    "database": "your_database",
+    "expected_output": "The D1 pipeline profiles source_customers and source_accounts, validates the customer -> account foreign key, generates PII-free synthetic CSVs for both tables with the account customer_id values drawn from the customer key pool (zero FK orphans), and returns a quality scorecard with an overall PASS verdict."
+  },
+  {
+    "example_id": "syn_d1_single_master",
+    "target_tables": "source_customers",
+    "rows_per_table": "100",
+    "database": "your_database",
+    "expected_output": "The D1 pipeline profiles source_customers, generates a PII-free synthetic CSV of the requested rows for the single master table (no FK linking required), and returns a quality scorecard with an overall PASS verdict."
+  }
+]

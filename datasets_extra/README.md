@@ -13,6 +13,45 @@ default bundled datasets unchanged.
 |--------|----------|--------------|------|
 | `uc1_predictive_maintenance/` | UC1 Predictive Maintenance (CNC) | `machine_id`, `alert_timestamp`, `health_score` | 6 |
 | `uc2_predictive_quality/` | UC2 Predictive Quality (Bike Mfg) | `machine_id`, `alert_timestamp`, `defect_rate`, `risk_level` | 6 |
+| `synthetic_data_d1/` | Synthetic Data D1 (Agent Studio only) | `target_tables`, `rows_per_table`, `database` | 3 |
+| `synthetic_data_d2/` | Synthetic Data D2 (Agent Studio + SDS) | `target_tables`, `rows_per_table`, `database` | 3 |
+| `lab2_calculator/` | Lab 2 Calculator (NPV Workflow) | `FV`, `years`, `discount` | 8 |
+
+### Lab 2 Calculator dataset
+
+`lab2_calculator` is the **only dataset with a fully deterministic correct answer** —
+the NPV formula `FV ÷ (1 + discount/100)^years` is a pure function, so every record's
+`expected_output` contains the pre-computed exact dollar value. This enables
+`npv_exact_match`, a deterministic metric that extracts the dollar figure from the
+workflow's final output and checks it against the reference (±$0.02 tolerance). No judge
+LLM is required.
+
+The canonical record (`lab2_canonical`, FV=5000 / years=4.5 / discount=6.5%) produces
+`$3,766.14`, exactly matching the Lab 2 Step 7 reference output. The other 7 records
+cover variations in discount rate, time horizon, and FV to stress-test the tool-calling
+chain (exponent + division).
+
+`agent_goal_accuracy` is registered as a secondary metric to assess whether the agent
+showed its work and called the tool correctly. `agent_outcome_judge` is intentionally
+omitted — numeric exact match is strictly more reliable for this workflow.
+
+### Synthetic-data workflow datasets (D1 / D2)
+
+`synthetic_data_d1` and `synthetic_data_d2` evaluate the synthetic-data-generation
+workflows (see the Handson_labs synthetic_data_lab). Both share the same three workflow
+inputs (`target_tables`, `rows_per_table`, `database`) and three scenarios each: full
+3-table FK chain, 2-table chain, and single master table.
+
+Because these workflows self-produce a quality scorecard (no fixed answer key), the
+`expected_output` is an **outcome/completeness statement** (schema scanned, FK-consistent
+rows generated for the target tables, quality gate passed) scored by `agent_goal_accuracy`
+and `agent_outcome_judge`. Recommended `agent_outcome_judge` `dimensions` (one per line):
+`all target tables generated`; `foreign-key integrity across tables`; `quality gate / verdict passed`.
+
+Running the live workflows needs infra beyond the dataset: D1 needs `iceberg-mcp-server`
+pointed at the Impala database; D2 additionally needs the deployed Synthetic Data Studio
+CAI app + `synthetic_data_studio_tool`. Set `database` to your actual Impala DB, and keep
+D2 `rows_per_table` at 25 (SDS synchronous demo cap).
 
 Each folder holds a `metadata.json` (schema) and `validation.json` (records). Records use the
 Agent Studio workflow input variables as columns plus an `expected_output` reference, and are

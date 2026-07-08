@@ -1,0 +1,23 @@
+[
+  {
+    "example_id": "syn_d2_full_chain",
+    "target_tables": "source_customers,source_accounts,source_transactions",
+    "rows_per_table": "25",
+    "database": "your_database",
+    "expected_output": "The D2 pipeline scans the schema for source_customers, source_accounts, and source_transactions, builds per-table SDS generation prompts, generates synthetic rows via Synthetic Data Studio in FK order with child FK values drawn from parent key pools, and returns an SDS LLM-as-judge scorecard with an overall PASS verdict and dataset_ready_for_training true."
+  },
+  {
+    "example_id": "syn_d2_two_table",
+    "target_tables": "source_customers,source_accounts",
+    "rows_per_table": "25",
+    "database": "your_database",
+    "expected_output": "The D2 pipeline scans source_customers and source_accounts, builds SDS prompts, and generates synthetic rows via Synthetic Data Studio with the account customer_id values drawn from the customer key pool, then returns an SDS quality scorecard with an overall PASS verdict."
+  },
+  {
+    "example_id": "syn_d2_single_master",
+    "target_tables": "source_customers",
+    "rows_per_table": "25",
+    "database": "your_database",
+    "expected_output": "The D2 pipeline scans source_customers, builds an SDS prompt, generates synthetic rows via Synthetic Data Studio for the single master table (no FK linking required), and returns an SDS quality scorecard with an overall PASS verdict."
+  }
+]

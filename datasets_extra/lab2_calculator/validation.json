@@ -1,0 +1,58 @@
+[
+  {
+    "example_id": "lab2_canonical",
+    "FV": "5000",
+    "years": "4.5",
+    "discount": "6.5",
+    "expected_output": "The NPV of a future value of $5,000 discounted at 6.5% over 4.5 years is $3,766.14."
+  },
+  {
+    "example_id": "lab2_round_years",
+    "FV": "5000",
+    "years": "3.0",
+    "discount": "6.5",
+    "expected_output": "The NPV of a future value of $5,000 discounted at 6.5% over 3.0 years is $4,139.25."
+  },
+  {
+    "example_id": "lab2_round_rate",
+    "FV": "5000",
+    "years": "4.5",
+    "discount": "5.0",
+    "expected_output": "The NPV of a future value of $5,000 discounted at 5.0% over 4.5 years is $4,014.38."
+  },
+  {
+    "example_id": "lab2_high_discount",
+    "FV": "5000",
+    "years": "4.5",
+    "discount": "10.0",
+    "expected_output": "The NPV of a future value of $5,000 discounted at 10.0% over 4.5 years is $3,256.14."
+  },
+  {
+    "example_id": "lab2_low_discount",
+    "FV": "5000",
+    "years": "4.5",
+    "discount": "2.0",
+    "expected_output": "The NPV of a future value of $5,000 discounted at 2.0% over 4.5 years is $4,573.72."
+  },
+  {
+    "example_id": "lab2_short_period",
+    "FV": "8000",
+    "years": "2.0",
+    "discount": "8.0",
+    "expected_output": "The NPV of a future value of $8,000 discounted at 8.0% over 2.0 years is $6,858.71."
+  },
+  {
+    "example_id": "lab2_long_period",
+    "FV": "3000",
+    "years": "10.0",
+    "discount": "7.5",
+    "expected_output": "The NPV of a future value of $3,000 discounted at 7.5% over 10.0 years is $1,455.58."
+  },
+  {
+    "example_id": "lab2_zero_discount",
+    "FV": "5000",
+    "years": "4.5",
+    "discount": "0.0",
+    "expected_output": "The NPV of a future value of $5,000 discounted at 0.0% over 4.5 years is $5,000.00."
+  }
+]

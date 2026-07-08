@@ -1,0 +1,12 @@
+{
+  "id": "synthetic_data_d1",
+  "name": "Synthetic Data D1 (Agent Studio only)",
+  "description": "Agent Studio eval for the D1 synthetic-data workflow (5 agents, purely Agent Studio). Inputs map to the workflow variables target_tables, rows_per_table, database; expected_output describes the expected pipeline outcome (schema scan -> FK inference -> PII-free CSV generation -> FK patch -> quality scorecard). Running the live workflow requires iceberg-mcp-server pointed at the Impala database. Set database to the actual Impala DB at eval time.",
+  "size": 3,
+  "task_type": "agent",
+  "input_fields": ["target_tables", "rows_per_table", "database"],
+  "reference_fields": ["expected_output"],
+  "requires_execution": false,
+  "default_metrics": ["agent_goal_accuracy", "agent_outcome_judge"],
+  "custom": true
+}

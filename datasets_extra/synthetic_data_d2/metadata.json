@@ -1,0 +1,12 @@
+{
+  "id": "synthetic_data_d2",
+  "name": "Synthetic Data D2 (Agent Studio + SDS)",
+  "description": "Agent Studio eval for the D2 synthetic-data workflow (4 agents; orchestrates Cloudera Synthetic Data Studio). Inputs map to the workflow variables target_tables, rows_per_table, database; expected_output describes the expected pipeline outcome (schema scan -> prompt build -> SDS generation in FK order -> SDS LLM-as-judge scorecard). Running the live workflow requires iceberg-mcp-server pointed at the Impala database AND the deployed SDS CAI app + synthetic_data_studio_tool. rows_per_table is kept at 25 (SDS synchronous demo cap). Set database to the actual Impala DB at eval time.",
+  "size": 3,
+  "task_type": "agent",
+  "input_fields": ["target_tables", "rows_per_table", "database"],
+  "reference_fields": ["expected_output"],
+  "requires_execution": false,
+  "default_metrics": ["agent_goal_accuracy", "agent_outcome_judge"],
+  "custom": true
+}

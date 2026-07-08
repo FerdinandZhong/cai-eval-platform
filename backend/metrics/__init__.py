@@ -77,6 +77,7 @@ from . import component_match as _cm
 from . import exact_match as _em
 from . import execution_accuracy as _ea
 from . import llm_judge as _lj
+from . import npv_exact_match as _npv
 from . import ragas_agent as _ra
 from . import token_f1 as _tf
 
@@ -149,6 +150,15 @@ register(
         {"name": "token", "label": "API Token", "type": "password", "placeholder": "sk-..."},
         {"name": "model", "label": "Model Name", "type": "text", "placeholder": "default"},
     ],
+    task_types=["agent", "general"],
+)
+register(
+    "npv_exact_match",
+    _npv.score,
+    "Deterministic NPV result match: extracts the dollar figure from the workflow "
+    "output and checks it against the pre-computed reference (±$0.02 tolerance). "
+    "No judge LLM required.",
+    "binary",
     task_types=["agent", "general"],
 )
 register(
