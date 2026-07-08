@@ -35,6 +35,22 @@ chain (exponent + division).
 showed its work and called the tool correctly. `agent_outcome_judge` is intentionally
 omitted — numeric exact match is strictly more reliable for this workflow.
 
+#### Registering `npv_exact_match`
+
+`npv_exact_match` is **workflow-specific** (parses NPV dollar figures) and is not
+pre-loaded into the platform. Register it on demand via the UI or API before selecting
+it in a job:
+
+- **UI:** Metrics section → **Define Metric**, paste the contents of
+  [`datasets_extra/metrics/npv_exact_match.py`](metrics/npv_exact_match.py).
+- **API:**
+  ```bash
+  curl -X POST http://localhost:8080/api/metrics/define \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"npv_exact_match\",\"type\":\"binary\",\"code\":$(python3 -c 'import json,sys;print(json.dumps(open("datasets_extra/metrics/npv_exact_match.py").read()))')}"
+  ```
+- **On disk (persistent):** copy to `DATA_DIR/custom_metrics/` and restart the app.
+
 ### Synthetic-data workflow datasets (D1 / D2)
 
 `synthetic_data_d1` and `synthetic_data_d2` evaluate the synthetic-data-generation

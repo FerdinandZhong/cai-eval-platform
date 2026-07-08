@@ -7,6 +7,6 @@
   "input_fields": ["FV", "years", "discount"],
   "reference_fields": ["expected_output"],
   "requires_execution": false,
-  "default_metrics": ["npv_exact_match", "agent_goal_accuracy"],
+  "default_metrics": ["agent_goal_accuracy"],
   "custom": true
 }
