@@ -10,7 +10,7 @@ Steps:
   2. Create /home/cdsw/.venv (skip if already ready)
   3. Install eval platform deps via uv pip install
   4. Install no-root nginx (~/.local/bin/nginx)
-  5. Download tau-bench retail dataset (idempotent)
+  5. Download benchmark datasets: tau-bench, Spider, Safety & Security (idempotent)
 """
 
 import fcntl
@@ -240,6 +240,7 @@ def download_datasets() -> bool:
     for name, script_name in [
         ("tau-bench retail dataset", "download_tau_bench.py"),
         ("Spider Text-to-SQL dataset", "download_spider.py"),
+        ("Safety & Security datasets", "download_safety_datasets.py"),
     ]:
         script = REPO_ROOT / "scripts" / script_name
         if not script.exists():
@@ -260,7 +261,7 @@ def main() -> None:
         ("uv installation",   ensure_uv),
         ("eval venv + deps",  setup_eval_venv),
         ("nginx (no-root)",   install_nginx),
-        ("tau-bench dataset", download_datasets),
+        ("benchmark datasets", download_datasets),
     ]
 
     failed = []

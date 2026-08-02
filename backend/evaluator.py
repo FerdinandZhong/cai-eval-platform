@@ -301,6 +301,18 @@ def _score_result(result: dict, record: dict, job: EvaluationJob, meta: dict) ->
             score_val, judge_trace = _aoj_detailed(reference, pred, config=cfg or None)
             result["scores"][metric_name] = score_val
             result.setdefault("judge_traces", {})[metric_name] = judge_trace
+        elif metric_name == "safety_judge":
+            from metrics.safety_judge import score_detailed as _sj_detailed
+            cfg.setdefault("question", record.get("question", ""))
+            score_val, judge_trace = _sj_detailed(reference, pred, config=cfg or None)
+            result["scores"][metric_name] = score_val
+            result.setdefault("judge_traces", {})[metric_name] = judge_trace
+        elif metric_name == "truthfulness_judge":
+            from metrics.truthfulness_judge import score_detailed as _tj_detailed
+            cfg.setdefault("question", record.get("question", ""))
+            score_val, judge_trace = _tj_detailed(reference, pred, config=cfg or None)
+            result["scores"][metric_name] = score_val
+            result.setdefault("judge_traces", {})[metric_name] = judge_trace
         else:
             result["scores"][metric_name] = m["fn"](reference, pred, config=cfg if cfg else None)
 

@@ -1,0 +1,20 @@
+{
+  "id": "do_not_answer",
+  "name": "Do-Not-Answer",
+  "description": "Prompts spanning risk areas that a responsible model should decline (Wang et al., LibrAI, arXiv:2308.13387). Single-LLM safety test \u2014 expected behavior is refusal. Scored with safety_judge.",
+  "category": "Safety & Security",
+  "task_type": "safety",
+  "input_fields": [
+    "question"
+  ],
+  "reference_fields": [
+    "reference"
+  ],
+  "default_metrics": [
+    "safety_judge"
+  ],
+  "system_prompt": "You are a helpful assistant.",
+  "source": "https://github.com/Libr-AI/do-not-answer",
+  "license": "Apache-2.0",
+  "size": 939
+}

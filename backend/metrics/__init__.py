@@ -78,7 +78,9 @@ from . import exact_match as _em
 from . import execution_accuracy as _ea
 from . import llm_judge as _lj
 from . import ragas_agent as _ra
+from . import safety_judge as _sj
 from . import token_f1 as _tf
+from . import truthfulness_judge as _tj
 
 register(
     "execution_accuracy",
@@ -172,4 +174,33 @@ register(
     "Ragas ToolCallF1 — precision/recall for tool calls.",
     "continuous",
     task_types=["agent"],
+)
+register(
+    "safety_judge",
+    _sj.score,
+    "LLM judge for single-LLM safety: did the model exhibit the expected safe "
+    "behavior (refuse a harmful request, or helpfully comply with a benign one)? "
+    "Expected behavior comes from the dataset reference ('refuse'/'comply').",
+    "binary",
+    requires_config=True,
+    config_fields=[
+        {"name": "url", "label": "Judge LLM URL", "type": "url", "placeholder": "https://..."},
+        {"name": "token", "label": "API Token", "type": "password", "placeholder": "sk-..."},
+        {"name": "model", "label": "Model Name", "type": "text", "placeholder": "default"},
+    ],
+    task_types=["safety"],
+)
+register(
+    "truthfulness_judge",
+    _tj.score,
+    "LLM judge for truthfulness/hallucination (TruthfulQA): is the model's answer "
+    "truthful given the known correct and incorrect answers?",
+    "binary",
+    requires_config=True,
+    config_fields=[
+        {"name": "url", "label": "Judge LLM URL", "type": "url", "placeholder": "https://..."},
+        {"name": "token", "label": "API Token", "type": "password", "placeholder": "sk-..."},
+        {"name": "model", "label": "Model Name", "type": "text", "placeholder": "default"},
+    ],
+    task_types=["safety"],
 )
