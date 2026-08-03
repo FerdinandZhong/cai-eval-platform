@@ -273,6 +273,17 @@ input:focus, select:focus, textarea:focus {
   gap: 12px;
   margin-bottom: 4px;
 }
+/* Grouped view: outer container stacks category blocks, each with its own grid. */
+#dataset-radio-grid { display: block; }
+.ds-group + .ds-group { margin-top: 16px; }
+.ds-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
 .dataset-radio-card {
   display: flex;
   flex-direction: column;
@@ -843,6 +854,7 @@ let _datasets = [];
 let _metrics  = [];
 let _jobs     = [];
 let _selectedJobId = null;
+let _selectedDefaults = [];   // default_metrics of the currently selected dataset
 
 function onTargetChange() {
   const t = document.getElementById('target-type').value;
@@ -852,7 +864,46 @@ function onTargetChange() {
   document.getElementById('system-prompt-group').style.display = t === 'llm_endpoint' ? '' : 'none';
   document.getElementById('llm-options-row').style.display = t === 'llm_endpoint' ? '' : 'none';
   document.getElementById('reasoning-row').style.display = t === 'llm_endpoint' ? '' : 'none';
-  fetchMetrics(t === 'agent_studio' ? 'agent' : t === 'llm_endpoint' ? 'text2sql' : null);
+  refreshMetrics();
+}
+
+// Display category for a dataset — explicit `category` wins, else derived from task_type.
+function datasetCategory(ds) {
+  if (ds.category) return ds.category;
+  return { text2sql: 'Text-to-SQL', agent: 'Agent Workflow', safety: 'Safety & Security' }[ds.task_type]
+    || 'Other';
+}
+
+function selectedDataset() {
+  const r = document.querySelector('input[name="dataset"]:checked');
+  return r ? _datasets.find(d => d.id === r.value) : null;
+}
+
+// The task_type that should drive the metric list: the selected dataset's
+// task_type when known, otherwise fall back to the target-type mapping.
+function currentTaskType() {
+  const ds = selectedDataset();
+  if (ds && ds.task_type) return ds.task_type;
+  const t = document.getElementById('target-type').value;
+  return t === 'agent_studio' ? 'agent' : t === 'llm_endpoint' ? 'text2sql' : null;
+}
+
+function refreshMetrics() {
+  const ds = selectedDataset();
+  _selectedDefaults = (ds && ds.default_metrics) || [];
+  fetchMetrics(currentTaskType());
+}
+
+function onDatasetChange(id) {
+  const ds = _datasets.find(d => d.id === id);
+  if (!ds) return;
+  document.getElementById('system-prompt').value = ds.system_prompt || '';
+  // Safety datasets are single-LLM only — force the LLM Endpoint target.
+  if (ds.task_type === 'safety') {
+    const tt = document.getElementById('target-type');
+    if (tt.value !== 'llm_endpoint') { tt.value = 'llm_endpoint'; onTargetChange(); return; }
+  }
+  refreshMetrics();
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -892,30 +943,49 @@ async function fetchDatasets() {
   } catch (_) {}
 }
 
+// Preferred category ordering; unlisted categories follow in first-seen order.
+const _CATEGORY_ORDER = ['Text-to-SQL', 'Agent Workflow', 'Safety & Security'];
+
 function renderDatasetRadios() {
   const grid = document.getElementById('dataset-radio-grid');
   if (!_datasets.length) {
     grid.innerHTML = '<div style="color:var(--text-secondary);font-size:14px">No datasets found.</div>';
     return;
   }
-  grid.innerHTML = _datasets.map((ds, i) => `
-    <label class="dataset-radio-card" for="ds-${ds.id}">
-      <input type="radio" name="dataset" value="${ds.id}" id="ds-${ds.id}" ${i === 0 ? 'checked' : ''}>
-      <div class="ds-name">${esc(ds.name)}</div>
-      <div class="ds-desc">${esc(ds.description || '')}</div>
-      <div class="ds-desc" style="color:var(--text-secondary)">${ds.size} examples</div>
-    </label>
+
+  // Group datasets by display category, preserving overall index for default-check.
+  const groups = new Map();
+  _datasets.forEach((ds, i) => {
+    const cat = datasetCategory(ds);
+    if (!groups.has(cat)) groups.set(cat, []);
+    groups.get(cat).push({ ds, i });
+  });
+  const cats = [...groups.keys()].sort((a, b) => {
+    const ia = _CATEGORY_ORDER.indexOf(a), ib = _CATEGORY_ORDER.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+
+  grid.innerHTML = cats.map(cat => `
+    <div class="ds-group">
+      <div class="ds-group-title">${esc(cat)}</div>
+      <div class="dataset-radio-grid">
+        ${groups.get(cat).map(({ ds, i }) => `
+          <label class="dataset-radio-card" for="ds-${ds.id}">
+            <input type="radio" name="dataset" value="${ds.id}" id="ds-${ds.id}" ${i === 0 ? 'checked' : ''}>
+            <div class="ds-name">${esc(ds.name)}</div>
+            <div class="ds-desc">${esc(ds.description || '')}</div>
+            <div class="ds-desc" style="color:var(--text-secondary)">${ds.size} examples</div>
+          </label>
+        `).join('')}
+      </div>
+    </div>
   `).join('');
 
-  // Auto-fill system prompt when dataset changes
   document.querySelectorAll('input[name="dataset"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-      const ds = _datasets.find(d => d.id === this.value);
-      if (ds) document.getElementById('system-prompt').value = ds.system_prompt || '';
-    });
+    radio.addEventListener('change', function() { onDatasetChange(this.value); });
   });
-  // Populate for initial selection
-  if (_datasets[0]) document.getElementById('system-prompt').value = _datasets[0].system_prompt || '';
+  // Initialise system prompt / metrics for the first (checked) dataset.
+  if (_datasets[0]) onDatasetChange(_datasets[0].id);
 }
 
 function renderDatasetCards() {
@@ -1047,15 +1117,18 @@ function renderMetricsCatalog(metrics) {
 function renderMetrics() {
   const grid = document.getElementById('metrics-grid');
   const configs = document.getElementById('metric-configs');
+  // Pre-check the selected dataset's default_metrics; fall back to the first metric.
+  const defaults = (_selectedDefaults && _selectedDefaults.length) ? _selectedDefaults : null;
+  const isChecked = (m, i) => defaults ? defaults.includes(m.name) : (i === 0);
   grid.innerHTML = _metrics.map((m, i) => `
     <label class="metric-chip" title="${esc(m.description || '')}">
-      <input type="checkbox" name="metric" value="${m.name}" ${i === 0 ? 'checked' : ''}
+      <input type="checkbox" name="metric" value="${m.name}" ${isChecked(m, i) ? 'checked' : ''}
         ${m.requires_config ? `onchange="toggleMetricConfig('${m.name}', this.checked)"` : ''}>
       <span>${esc(m.name)}</span>
     </label>
   `).join('');
   configs.innerHTML = _metrics.filter(m => m.requires_config).map(m => `
-    <div id="config-${m.name}" class="metric-config-panel">
+    <div id="config-${m.name}" class="metric-config-panel${isChecked(m, _metrics.indexOf(m)) ? ' visible' : ''}">
       <div class="config-title">${esc(m.name)} configuration</div>
       <div class="form-row">
         ${(m.config_fields || []).map(f => `

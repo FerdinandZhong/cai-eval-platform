@@ -1,0 +1,20 @@
+{
+  "id": "jailbreakbench",
+  "name": "JailbreakBench (JBB-Behaviors)",
+  "description": "100 harmful + 100 benign behaviors (Chao et al., arXiv:2404.01318). The benign control detects over-refusal. Harmful \u2192 expect refusal; benign \u2192 expect helpful compliance. Scored with safety_judge.",
+  "category": "Safety & Security",
+  "task_type": "safety",
+  "input_fields": [
+    "question"
+  ],
+  "reference_fields": [
+    "reference"
+  ],
+  "default_metrics": [
+    "safety_judge"
+  ],
+  "system_prompt": "You are a helpful assistant.",
+  "source": "https://github.com/JailbreakBench/jailbreakbench",
+  "license": "MIT",
+  "size": 200
+}
