@@ -22,6 +22,7 @@ CAI Eval Platform gives your team concrete, reproducible answers:
 ## What it does
 
 - **Benchmark LLM endpoints** — run text2sql (Spider, TPC-H) or agent tasks against any OpenAI-compatible API including self-hosted models on vLLM
+- **Evaluate model safety & truthfulness** — single-LLM jailbreak/refusal and hallucination benchmarks (AdvBench, Do-Not-Answer, JailbreakBench, TruthfulQA) scored by an LLM judge
 - **Test Agent Studio workflows** — black-box evaluation of deployed Cloudera Agent Studio workflows via kickoff/events API
 - **Score with Ragas** — AgentGoalAccuracy, ToolCallAccuracy, ToolCallF1 for agent tasks; SQL execution accuracy for text2sql
 - **Trace everything** — OTEL spans per example, workflow event timelines, per-dataset/model Phoenix projects for clean experiment separation
