@@ -2,10 +2,11 @@
 
 Deploy from source on Cloudera AI Workbench — the platform runs as a single CAI Application with Phoenix + FastAPI behind nginx, all co-located on one port.
 
-```
-nginx (CDSW_APP_PORT)
-  ├── /        →  Phoenix tracing UI  (127.0.0.1:6006)
-  └── /app/    →  FastAPI eval API    (127.0.0.1:9000)
+```mermaid
+flowchart LR
+    nginx["nginx<br/>(CDSW_APP_PORT)"]
+    nginx -->|"/"| phoenix["Phoenix tracing UI<br/>127.0.0.1:6006"]
+    nginx -->|"/app/"| api["FastAPI eval API<br/>127.0.0.1:9000"]
 ```
 
 ## Option A — GitHub Actions (CI)
@@ -27,11 +28,11 @@ Use `skip_env_setup: true` on subsequent runs when the environment is already pr
 
 ### Job chain
 
-```
-setup-project       →  create / find CAI project
-create-jobs         →  register git_sync + setup_eval_env jobs
-trigger-setup-env   →  trigger git_sync; CAI auto-triggers setup_eval_env
-launch-applications →  create / restart the co-located Application
+```mermaid
+flowchart LR
+    a["setup-project<br/>create / find CAI project"] --> b["create-jobs<br/>register git_sync + setup_eval_env"]
+    b --> c["trigger-setup-env<br/>git_sync → auto-trigger setup_eval_env"]
+    c --> d["launch-applications<br/>create / restart the Application"]
 ```
 
 ## Option B — In-project launch

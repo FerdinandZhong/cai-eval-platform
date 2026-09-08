@@ -44,7 +44,11 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.tabbed:
@@ -59,6 +63,7 @@ nav:
           - CAI Workbench: getting_started/deploy_cai_workbench.md
           - CAII Applications: getting_started/deploy_caii_applications.md
   - Evaluation:
+      - Choosing an Eval: evaluation/choosing.md
       - Datasets: evaluation/datasets.md
       - LLM Endpoint: evaluation/llm_endpoint.md
       - Agent Studio Workflow: evaluation/agent_studio.md
@@ -69,3 +74,4 @@ nav:
       - API Reference: reference/api.md
       - Environment Variables: reference/env_vars.md
       - Architecture: reference/architecture.md
+      - Why vs Alternatives: reference/comparison.md

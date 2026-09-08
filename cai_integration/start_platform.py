@@ -207,6 +207,9 @@ def main() -> None:
     api_env["PHOENIX_BASE_URL"] = f"http://127.0.0.1:{PHOENIX_PORT}"
     api_env["DATA_DIR"] = str(DATA_DIR)
     api_env["DATASETS_DIR"] = str(REPO_ROOT / "datasets")
+    # nginx serves the API under /app/; makes Swagger UI (/app/docs) load its
+    # spec from /app/openapi.json instead of /openapi.json (which routes to Phoenix).
+    api_env["APP_ROOT_PATH"] = "/app"
     print(f"\n[2/3] starting eval API: uvicorn main:app on 127.0.0.1:{MANAGER_PORT}")
     api_proc = subprocess.Popen(
         [venv_python(), "-m", "uvicorn", "main:app",

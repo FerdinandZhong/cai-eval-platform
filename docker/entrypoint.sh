@@ -98,6 +98,9 @@ done
 
 echo "[entrypoint] starting eval API on :${MANAGER_PORT} ..."
 cd /app
+# nginx serves the API under /app/; tell FastAPI so Swagger UI (/app/docs) loads
+# its spec from /app/openapi.json instead of /openapi.json (which routes to Phoenix).
+export APP_ROOT_PATH="/app"
 python -m uvicorn main:app --host 127.0.0.1 --port "${MANAGER_PORT}" &
 APP_PID=$!
 

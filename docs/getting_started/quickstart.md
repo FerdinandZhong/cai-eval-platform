@@ -36,12 +36,37 @@ Run Phoenix separately:
 phoenix serve --port 6006
 ```
 
-## First evaluation
+## First evaluation (end to end)
 
-1. Open **http://localhost:8080/app/**
-2. Select a dataset (e.g. `Agent Workflow Sample`)
-3. Choose **Agent Studio Workflow** as the target
-4. Enter your workflow URL and API key
-5. Click **Discover Workflow Inputs** to auto-map fields
-6. Select metrics and click **Run Evaluation**
-7. View results and traces in Phoenix at **http://localhost:8080/**
+This walks a "client brings up a model" scenario all the way to concrete results.
+Not sure which evaluation fits your model? See [Choosing the right evaluation](../evaluation/choosing.md).
+
+1. **Open the app** — `http://localhost:8080/app/`.
+
+    ![Eval app landing page](../images/landing_page_eval_app.png)
+
+2. **Pick the target type** — an LLM endpoint (text2sql / safety) or an Agent Studio workflow.
+
+    ![Select eval mode](../images/select_eval_mode_llm_or_agent.png)
+
+3. **Select a dataset and metrics.** For a model endpoint, choose e.g. `spider` with
+   `execution_accuracy`; for a workflow, choose `agent_sample` and click
+   **Discover Workflow Inputs** to auto-map dataset columns, then pick Ragas metrics.
+
+    ![Detailed eval configuration](../images/detailed_configuration_of_single_llm_evaluation.png)
+
+4. **Enter the endpoint / workflow URL + API key** (and a judge LLM URL for judge-based metrics), then **Run Evaluation**.
+
+5. **Read the results.** Each run produces per-example scores and an aggregate. The run
+   detail shows every example's input, output, and score.
+
+    ![Experiment results](../images/experiments_results.png)
+
+6. **Inspect traces in Phoenix** at `http://localhost:8080/`. Every example is an
+   `eval.example` OTEL span; the run lives in a `{dataset}_{model}` project so different
+   models are directly comparable.
+
+    ![Trace detail](../images/eval_tracing.png)
+
+To compare a second model, re-run the same dataset + metrics with a different endpoint — the
+new run appears as a separate Phoenix project alongside the first.
