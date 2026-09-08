@@ -1,0 +1,59 @@
+name: CAI Eval Platform
+description: >-
+  Evaluate LLM endpoints and agentic workflows inside Cloudera AI with Arize
+  Phoenix tracing. Runs text2sql, agent, and safety benchmarks, tests Agent
+  Studio workflows, and stores reproducible experiments — served as a single
+  CAI Application (Phoenix + FastAPI behind nginx).
+author: Cloudera
+specification_version: 1.0
+prototype_version: 1.0
+date: "2026-09-08"
+
+environment_variables:
+  JUDGE_LLM_URL:
+    default: ""
+    description: >-
+      OpenAI-compatible endpoint used as the default judge LLM for Ragas and
+      LLM-as-judge metrics. Leave blank to configure per-run in the UI.
+    required: false
+  DATA_DIR:
+    default: "/home/cdsw/cai-eval-data"
+    description: "Persistent storage for the Phoenix store, custom metrics, and results."
+    required: false
+
+runtimes:
+  - editor: Workbench
+    kernel: Python 3.10
+    edition: Standard
+
+tasks:
+  - type: run_session
+    name: Set up eval environment
+    entity_label: setup_eval_env
+    script: cai_integration/setup_environment.py
+    short_summary: >-
+      Create the venv, install dependencies, build no-root nginx, and download
+      the bundled benchmark datasets (Spider, tau-bench, Safety & Security).
+    long_summary: >-
+      Runs cai_integration/setup_environment.py: installs uv, creates
+      /home/cdsw/.venv with the eval dependencies, compiles nginx from source
+      (no root required in CAI Workbench), and downloads the bundled benchmark
+      datasets. Idempotent — safe to re-run.
+    kernel: python3
+    cpu: 4
+    memory: 16
+
+  - type: start_application
+    name: CAI Eval Platform
+    subdomain: cai-eval
+    script: cai_integration/start_platform.py
+    short_summary: >-
+      Launch the co-located Application — Phoenix + FastAPI behind nginx on
+      CDSW_APP_PORT. Eval UI at /app/, Phoenix at /, API docs at /app/docs.
+    long_summary: >-
+      Starts cai_integration/start_platform.py, which brings up Phoenix and the
+      FastAPI eval engine on localhost and multiplexes them behind nginx on
+      CDSW_APP_PORT. Requires the "Set up eval environment" task to have run first.
+    kernel: python3
+    cpu: 4
+    memory: 16

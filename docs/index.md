@@ -29,35 +29,27 @@ CAI Eval Platform gives your team concrete, reproducible answers:
 
 ## System design
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│               CAI Eval Platform (one container / app)        │
-│                                                             │
-│  nginx (port 8080 / CDSW_APP_PORT)                          │
-│    ├── /        →  Arize Phoenix  :6006  (tracing UI+REST)  │
-│    └── /app/    →  FastAPI        :9000  (eval UI + API)    │
-│                                                             │
-│  FastAPI eval engine                                        │
-│    ├── evaluator.py      job orchestration                  │
-│    ├── phoenix_client.py dataset upload, experiment runs    │
-│    ├── tracing.py        OTEL span export per example       │
-│    └── targets/                                             │
-│         ├── llm_endpoint.py   OpenAI-compat chat API        │
-│         └── agent_studio.py  kickoff/poll workflow client   │
-│                                                             │
-│  Arize Phoenix                                              │
-│    ├── /v1/datasets      dataset store                      │
-│    ├── /v1/experiments   experiment + run store             │
-│    └── /v1/traces        OTEL collector                     │
-└─────────────────────────────────────────────────────────────┘
-           │                        │
-    ┌──────▼──────┐         ┌───────▼────────┐
-    │ LLM/vLLM   │         │  Agent Studio  │
-    │  endpoint  │         │   workflow     │
-    └────────────┘         └────────────────┘
+The platform runs as a single CAI Application: nginx fronts one port, routing `/` to
+Arize Phoenix and `/app/` to the FastAPI eval engine, which evaluates LLM endpoints
+and Agent Studio workflows and streams traces + experiment results into Phoenix.
+
+```mermaid
+flowchart TB
+    subgraph app["CAI Eval Platform — one container / app"]
+        nginx["nginx<br/>(port 8080 / CDSW_APP_PORT)"]
+        phoenix["Arize Phoenix<br/>datasets · experiments · OTEL traces<br/>(:6006)"]
+        fastapi["FastAPI eval engine<br/>evaluator · phoenix_client · tracing<br/>(:9000)"]
+
+        nginx -->|"/"| phoenix
+        nginx -->|"/app/"| fastapi
+        fastapi -->|"datasets · experiments · spans"| phoenix
+    end
+
+    fastapi -->|OpenAI-compatible API| llm["LLM / vLLM endpoint"]
+    fastapi -->|kickoff / events| studio["Agent Studio workflow"]
 ```
 
-Each eval run creates a **Phoenix project** named `{dataset_id}_{model_name}` so runs across different models are automatically separated and comparable in the Phoenix UI.
+Each eval run creates a **Phoenix project** named `{dataset_id}_{model_name}` so runs across different models are automatically separated and comparable in the Phoenix UI. See the [Architecture reference](reference/architecture.md) for the end-to-end evaluation flow.
 
 ## Quick links
 

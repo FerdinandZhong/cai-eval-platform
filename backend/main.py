@@ -29,7 +29,19 @@ STATIC_DIR = Path(__file__).parent / "static"
 _jobs: Dict[str, evaluator.EvaluationJob] = {}
 _lock = threading.Lock()
 
-app = FastAPI(title="CAI Eval Platform", version="1.0.0")
+app = FastAPI(
+    title="CAI Eval Platform",
+    version="1.0.0",
+    description=(
+        "REST API for the CAI Eval Platform — LLM endpoint benchmarks, "
+        "Agent Studio workflow testing, and Ragas metrics with Phoenix tracing. "
+        "Interactive docs are served at `/app/docs` when deployed behind nginx."
+    ),
+    # Behind nginx the app is mounted under /app/; APP_ROOT_PATH=/app makes the
+    # Swagger UI request /app/openapi.json instead of /openapi.json (which nginx
+    # routes to Phoenix). Empty for local dev on :9000.
+    root_path=os.environ.get("APP_ROOT_PATH", ""),
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

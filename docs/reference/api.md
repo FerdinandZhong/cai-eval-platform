@@ -2,6 +2,16 @@
 
 The eval API is a FastAPI application running at `<app-url>/app/` (co-located) or `http://localhost:9000` (local dev).
 
+!!! tip "Interactive Swagger UI"
+    Every deployment ships a live, auto-generated **Swagger UI** on the app itself:
+
+    - Deployed (CAI Workbench / CAII / Docker): **`<app-url>/app/docs`**
+    - Local dev: **`http://localhost:9000/docs`**
+
+    The OpenAPI schema is at `.../app/openapi.json`. Use *Try it out* to call endpoints
+    directly. The reference below is a curated summary — the Swagger UI is always the
+    source of truth for request/response schemas.
+
 ## Health
 
 ### `GET /api/health`
