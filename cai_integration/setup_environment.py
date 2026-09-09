@@ -177,17 +177,24 @@ def install_nginx():
 # Eval-platform-specific setup
 # ---------------------------------------------------------------------------
 
+# Pinned to a known-good, mutually-compatible set (keep in sync with docker/Dockerfile
+# and pyproject.toml). arize-phoenix 20.x fails to import on Python 3.11
+# (mutable-default `boolean_names` dataclass); 19.13.0 works. ragas pulls PIL but does
+# not always install pillow transitively. The otel/fastapi/pydantic versions are coupled
+# to this phoenix/ragas line — pin them together. The remaining deps are unaffected and
+# left bounded.
 EVAL_PACKAGES = [
-    "arize-phoenix>=4.0",
-    "opentelemetry-sdk>=1.20",
-    "opentelemetry-exporter-otlp-proto-http>=1.20",
-    "openinference-instrumentation-openai>=0.1",
+    "arize-phoenix==19.13.0",
+    "opentelemetry-sdk==1.44.0",
+    "opentelemetry-exporter-otlp-proto-http==1.44.0",
+    "openinference-instrumentation-openai==0.1.53",
     "openai>=1.0",
     "datasets>=2.14",
-    "fastapi>=0.110",
+    "fastapi==0.141.1",
     "uvicorn[standard]>=0.27",
-    "ragas>=0.2",
-    "pydantic>=2.0",
+    "ragas==0.4.3",
+    "pillow==12.3.0",
+    "pydantic==2.13.4",
     "requests>=2.31",
 ]
 
