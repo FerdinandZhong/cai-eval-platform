@@ -71,11 +71,13 @@ def score_detailed(gold_sql: str, pred_sql: str, config: Optional[dict] = None) 
 
     try:
         import openai
+        from llm_compat import chat_completion
         base = url.rstrip("/")
         if not base.endswith("/v1"):
             base = f"{base}/v1"
         client = openai.OpenAI(base_url=base, api_key=token)
-        response = client.chat.completions.create(
+        response = chat_completion(
+            client,
             model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,

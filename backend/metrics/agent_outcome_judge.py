@@ -88,12 +88,14 @@ def score_detailed(gold: str, pred: str, config: Optional[dict] = None) -> tuple
 
     try:
         import openai
+        from llm_compat import chat_completion
 
         base = url.rstrip("/")
         if not base.endswith("/v1"):
             base = f"{base}/v1"
         client = openai.OpenAI(base_url=base, api_key=token)
-        resp = client.chat.completions.create(
+        resp = chat_completion(
+            client,
             model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,

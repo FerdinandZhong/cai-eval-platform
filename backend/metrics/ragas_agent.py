@@ -25,7 +25,11 @@ def _get_judge_llm(config: Optional[dict] = None):
     if not base.endswith("/v1"):
         base = f"{base}/v1"
 
-    client = AsyncOpenAI(base_url=base, api_key=token)
+    from llm_compat import patch_async_client
+
+    # Newer GPT models reject max_tokens; ragas owns the call site, so wrap the
+    # client to retry with max_completion_tokens.
+    client = patch_async_client(AsyncOpenAI(base_url=base, api_key=token))
     return llm_factory(model, client=client, max_tokens=max_tokens)
 
 

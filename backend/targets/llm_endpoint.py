@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional
 
+from llm_compat import chat_completion
 from targets.base import EvalContext, TargetResult, TargetSchema
 
 
@@ -74,7 +75,8 @@ class LLMEndpointTarget:
                 base_url=base,
                 api_key=cfg.api_key or os.environ.get("OPENAI_API_KEY", "dummy"),
             )
-            response = client.chat.completions.create(
+            response = chat_completion(
+                client,
                 model=cfg.model_name,
                 messages=[
                     {"role": "system", "content": system_prompt},
